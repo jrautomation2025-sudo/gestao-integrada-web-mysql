@@ -1,0 +1,64 @@
+Options -Indexes
+RewriteEngine On
+RewriteBase /
+
+# --- PAGINAS PHP DA RAIZ ---
+# Remove .php e resolve internamente
+RewriteCond %{THE_REQUEST} ^[A-Z]{3,}\s/+(.*)\.php[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}\.php -f
+RewriteRule ^([^/]+)/?$ $1.php [L]
+
+# --- SISTEMAS EM SUBPASTAS (PHP) ---
+RewriteRule ^tesouraria/?$ tesouraria/login.php [L,NC]
+RewriteCond %{DOCUMENT_ROOT}/tesouraria/$1.php -f
+RewriteRule ^tesouraria/([^/]+)/?$ tesouraria/$1.php [L,NC]
+
+# --- SISTEMAS EM SUBPASTAS (PHP) ---
+RewriteRule ^chancelaria/?$ chancelaria/login.php [L,NC]
+RewriteCond %{DOCUMENT_ROOT}/chancelaria/$1.php -f
+RewriteRule ^chancelaria/([^/]+)/?$ chancelaria/$1.php [L,NC]
+
+# --- SISTEMAS EM SUBPASTAS (PHP) ---
+RewriteRule ^tesouraria/?$ tesouraria/login.php [L,NC]
+RewriteCond %{DOCUMENT_ROOT}/tesouraria/$1.php -f
+RewriteRule ^tesouraria/([^/]+)/?$ tesouraria/$1.php [L,NC]
+
+# --- SISTEMAS EM SUBPASTAS (PHP) ---
+RewriteRule ^configuracoes/?$ configuracoes/auth.php [L,NC]
+RewriteCond %{DOCUMENT_ROOT}/configuracoes/$1.php -f
+RewriteRule ^configuracoes/([^/]+)/?$ configuracoes/$1.php [L,NC]
+
+# --- SISTEMAS EM SUBPASTAS (PHP) ---
+RewriteRule ^administracao/?$ administracao/login.php [L,NC]
+RewriteCond %{DOCUMENT_ROOT}/administracao/$1.php -f
+RewriteRule ^administracao/([^/]+)/?$ administracao/$1.php [L,NC]
+
+# EXCEÇÃO ABSOLUTA: Não aplicar nenhuma reescrita em arquivos _ajax.php
+RewriteCond %{REQUEST_URI} _ajax\.php$
+RewriteRule .* - [L]
+
+SetEnv API_TOKEN "1GIMzNjTVnnzKr5ERSEserbQuaj1z80A1s4ddoRamMGkO7X4"
+
+<IfModule mod_headers.c>
+    # Impede que o site seja colocado em iFrames (Previne Clickjacking)
+    Header set X-Frame-Options "SAMEORIGIN"
+
+    # Impede o navegador de tentar adivinhar o tipo de conteúdo (MIME-type sniffing)
+    Header set X-Content-Type-Options "nosniff"
+
+    # Ativa o filtro de XSS no navegador
+    Header set X-XSS-Protection "1; mode=block"
+
+    # HSTS - Força HTTPS por um ano (Cuidado: requer SSL ativo)
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # Política de Referência
+    Header set Referrer-Policy "no-referrer-when-downgrade"
+</IfModule>
+
+<Files "config.php">
+    Order allow,deny
+    Deny from all
+</Files>
