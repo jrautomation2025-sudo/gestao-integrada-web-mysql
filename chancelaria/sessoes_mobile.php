@@ -118,6 +118,15 @@ if (isset($_GET['sessao_id'])) {
         .form-select, .form-control { background-color: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); }
         .form-select:focus, .form-control:focus { border-color: var(--gold); box-shadow: 0 0 0 0.25rem rgba(245, 192, 65, 0.25); color: var(--text-main); background-color: var(--bg-main); }
         table { color: var(--text-main) !important; font-size: 0.9rem; }
+        #relatorio-impressao { display: none; }
+        @media print {
+            body > .container { display: none !important; }
+            #relatorio-impressao { display: block !important; color: #000; background: #fff; padding: 24px; }
+            #relatorio-impressao table { width: 100%; border-collapse: collapse; color: #000 !important; }
+            #relatorio-impressao th, #relatorio-impressao td { border: 1px solid #999; padding: 8px; text-align: left; }
+            #relatorio-impressao h1 { font-size: 22px; margin: 0 0 8px; }
+            #relatorio-impressao p { margin: 4px 0; }
+        }
     </style>
 </head>
 <body>
