@@ -207,7 +207,13 @@ if (isset($_GET['sessao_id'])) {
 
         <!-- LISTA DE PRESENÇAS REGISTRADAS -->
         <div class="card-custom">
-            <h5 class="text-warning mb-3"><i class="fas fa-users me-2"></i>Presenças Registradas (<?= count($presencas_membros) + count($presencas_visitantes)  ?>)</h5>
+            <!--  <h5 class="text-warning mb-3"><i class="fas fa-users me-2"></i>Presenças Registradas (<?= count($presencas_membros) + count($presencas_visitantes)  ?>)</h5> -->
+            <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                <h5 class="text-warning mb-0"><i class="fas fa-users me-2"></i>Presenças Registradas (<?= count($presencas_membros) + count($presencas_visitantes)  ?>)</h5>
+                <button type="button" class="btn btn-sm btn-outline-warning" onclick="imprimirRelatorioPresenca()">
+                    <i class="fas fa-print me-1"></i> Imprimir relatório
+                </button>
+            </div>
             
             <ul class="nav nav-pills nav-fill mb-3" id="presencaTab" role="tablist">
                 <li class="nav-item" role="presentation">
