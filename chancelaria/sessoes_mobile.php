@@ -366,6 +366,28 @@ if (isset($_GET['sessao_id'])) {
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     <?php if ($sessao_ativa): ?>
+     // Gera relatorio de obreiros e visitantes
+     function imprimirRelatorioPresenca() {
+        const abaAtiva = document.querySelector('#presencaTab .nav-link.active');
+        const tipo = abaAtiva?.id === 'visitantes-tab' ? 'Visitantes' : 'Membros';
+        const tabelaAtiva = document.querySelector(tipo === 'Visitantes' ? '#visitantes table' : '#membros table');
+        const relatorio = document.getElementById('relatorio-impressao');
+
+        if (!tabelaAtiva || !relatorio) {
+            return;
+        }
+
+        relatorio.innerHTML = `
+            <h1>Relatório de Presença - ${tipo}</h1>
+            <p><strong>Sessão:</strong> <?= json_encode($sessao_ativa['titulo'] ?? 'Reunião', JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?></p>
+            <p><strong>Data:</strong> <?= date('d/m/Y', strtotime($sessao_ativa['data_sessao'] ?? 'now')) ?>
+                <strong>Hora:</strong> <?= date('H:i', strtotime($sessao_ativa['hora_sessao'] ?? 'now')) ?></p>
+            <br>
+            ${tabelaAtiva.outerHTML}
+        `;
+
+        window.print();
+    }
     // Gera o QR Code automaticamente com o link absoluto de check-in
     const linkCheckin = window.location.origin + "/chancelaria/checkin.php?token=<?= $sessao_ativa['token_presenca'] ?>";
     new QRCode(document.getElementById("qrcode"), {
