@@ -3,7 +3,7 @@ $host = getenv('DB_HOST') ?: 'localhost';
 $dbname = getenv('DB_NAME') ?: 'banco_local';
 $user = getenv('DB_USER') ?: 'root';
 $pass = getenv('DB_PASS') ?: '';
-$port = getenv('DB_PORT') ?: '';
+//$port = getenv('DB_PORT') ?: '';
 
 // ==========================================
 // VARIÁVEIS DE AMBIENTE (WEBHOOKS E APIS)
@@ -24,8 +24,8 @@ define('BASE_URL', $n8n_base_url);
 
 
 try {
-    //$pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
-    $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $pass);
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $pass);
+    //$pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Erro na conexão com o banco: " . $e->getMessage());
