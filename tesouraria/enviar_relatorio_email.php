@@ -304,7 +304,7 @@ try {
         </p>
     </div>";
 
-    $sqlMembros = "SELECT nome, email FROM clientes WHERE email IS NOT NULL AND email != '' AND situacao = 'Ativo' AND usuario_id = ?";
+    $sqlMembros = "SELECT nome, email FROM clientes WHERE email IS NOT NULL AND email = 'everaljun@gmail.com' AND situacao = 'Ativo' AND usuario_id = ?";
     $stmtMembros = $pdo->prepare($sqlMembros);
     $stmtMembros->execute([$user_id]); 
     $membros = $stmtMembros->fetchAll(PDO::FETCH_ASSOC);
