@@ -147,7 +147,7 @@ try {
         <p style='font-size: 14px;'>Prezados irmãos, segue abaixo o resumo e o detalhamento financeiro referentes ao período de " . $nomeMesAtual .".</p>
         
         <div style='background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>
-            <p style='margin: 5px 0;'><strong>Saldo Anterior:</strong> <span style='color: " . ($totalAnterior >= 0 ? '#0000FF' : '#dc3545') . ";'>+ R$ " . number_format($totalAnterior, 2, ',', '.') . "</span></p><br/>
+            <!--<p style='margin: 5px 0;'><strong>Saldo Anterior:</strong> <span style='color: " . ($totalAnterior >= 0 ? '#0000FF' : '#dc3545') . ";'>+ R$ " . number_format($totalAnterior, 2, ',', '.') . "</span></p><br/> -->
             <p style='margin: 5px 0;'><strong>Receitas Período:</strong> <span style='color: " . ($totalReceita >= 0 ? '#3CB371' : '#dc3545') . ";'>+ R$ " . number_format($totalReceita, 2, ',', '.') . "</span></p>
             <p style='margin: 5px 0;'><strong>Despesas Período:</strong> <span style='color: " . ($totalDespesas >= 0 ? '#FF0000' : '#dc3545') . ";'>- R$ " . number_format($totalDespesas, 2, ',', '.') . "</span></p>
             <p style='margin: 5px 0;'><strong>Saldo Atual Período:</strong> <span style='color: " . ($totalAtual >= 0 ? '#0000FF' : '#dc3545') . ";'>+ R$ " . number_format($totalAtual, 2, ',', '.') . "</span></p><br/>
