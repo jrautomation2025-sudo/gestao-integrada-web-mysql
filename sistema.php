@@ -210,7 +210,7 @@
             <div class="hero-content mx-auto">
                 <h1 class="font-classic mb-3" style="color: var(--gold); font-size: 3rem;">Gestão Maçônica Integrada</h1>
                 <p class="hero-subtitle">
-                    Selecione o módulo abaixo para acessar sua área de trabalho. Acesso restrito a membros autorizados.
+                    Selecione o módulo principal abaixo ou utilize o menu suspenso para acessar sua área de trabalho. Acesso restrito a membros autorizados.
                 </p>
                 
                 <!-- GRID DE ATALHOS RÁPIDOS -->
