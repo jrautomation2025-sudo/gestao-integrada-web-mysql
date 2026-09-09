@@ -91,7 +91,7 @@
 </head>
 <body>
     
-    <a href="/" class="btn-voltar">
+    <a href="/sistema" class="btn-voltar">
         <i class="fas fa-arrow-left me-2"></i> Voltar ao Site
     </a>
 
