@@ -101,7 +101,7 @@ try {
                         <option value="0">Escolha uma sessão...</option>
                         <?php foreach ($sessoes as $s): ?>
                             <option value="<?= $s['id'] ?>" <?= $s['id'] == $sessao_id ? 'selected' : '' ?>>
-                                <?= date('d/m/Y', strtotime($s['data_sessao'])) ?> - <?= htmlspecialchars($s['tipo']) ?> (Grau <?= $s['grau_trabalho'] ?>)
+                                <?= date('d/m/Y', strtotime($s['data_sessao'])) ?> - <?= htmlspecialchars($s['tipo']) ?> (Grau <?= $s['grau'] ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
