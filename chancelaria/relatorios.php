@@ -189,8 +189,27 @@ try {
                                     <tr>
                                         <td class="fw-bold text-white"><?= htmlspecialchars($m['nome']) ?></td>
                                         <td class="text-light"><?= htmlspecialchars($m['cim'] ?: '-') ?></td>
-                                        <td class="text-light">Grau <?= htmlspecialchars($m['grau']) ?></td>
+                                        <td class="text-light"><?= htmlspecialchars($m['grau']) ?></td>
                                         <td class="text-light"><?= htmlspecialchars($m['cargo'] ?: '-') ?></td>
+                                        <td class="text-light">
+                                    <?php if ($m['cargo'] === 'veneravel'): ?>
+                                        <span>Venerável Mestre</span>
+                                    <?php elseif ($m['cargo'] === 'vigilante_1'): ?>
+                                        <span>1° Vigilante</span>
+                                    <?php elseif ($m['cargo'] === 'vigilante_2'): ?>
+                                        <span>2° Vigilante</span>
+                                    <?php elseif ($m['cargo'] === 'orador'): ?>
+                                        <span>Orador</span>
+                                    <?php elseif ($m['cargo'] === 'secretario'): ?>
+                                        <span>Secretário</span>
+                                    <?php elseif ($m['cargo'] === 'chanceler'): ?>
+                                        <span>Chanceler</span>
+                                    <?php elseif ($m['cargo'] === 'tesoureiro'): ?>
+                                        <span>Tesoureiro</span>
+                                    <?php else: ?>
+                                        <span><?= '-' ?></span>
+                                    <?php endif; ?>
+                                        </td>
                                         <td class="text-light"><?= htmlspecialchars($m['status']) ?></td>
                                         <td class="text-light">
                                             <?= htmlspecialchars($m['telefone'] ?: '') ?> 
