@@ -190,7 +190,6 @@ try {
                                         <td class="fw-bold text-white"><?= htmlspecialchars($m['nome']) ?></td>
                                         <td class="text-light"><?= htmlspecialchars($m['cim'] ?: '-') ?></td>
                                         <td class="text-light"><?= htmlspecialchars($m['grau']) ?></td>
-                                        <td class="text-light"><?= htmlspecialchars($m['cargo'] ?: '-') ?></td>
                                         <td class="text-light">
                                     <?php if ($m['cargo'] === 'veneravel'): ?>
                                         <span>Venerável Mestre</span>
