@@ -166,17 +166,19 @@ document.getElementById('btnTogglePix').addEventListener('click', function() {
         }
     }
 
-    document.querySelectorAll('chave_pix').forEach(elemento => {
-            let cnpjLimpo = elemento.textContent.replace(/\D/g, ''); // Garante que só há números
-            
-            if (cnpjLimpo.length === 14) {
-                // Aplica a máscara de CNPJ: 00.000.000/0000-00
-                elemento.textContent = cnpjLimpo.replace(
-                    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, 
-                    "$1.$2.$3/$4-$5"
-                );
-            }
-        });
+    const input = document.getElementById('chave_pix');
+    
+    input.addEventListener('input', (e) => {
+        let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+        
+        // Aplica a máscara progressivamente conforme o usuário digita
+        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+        value = value.replace(/(\d{4})(\d)/, '$1-$2');
+        
+        e.target.value = value.substring(0, 18); // Limita ao tamanho máximo do CNPJ com máscara
+    });
 
 </script>
 
