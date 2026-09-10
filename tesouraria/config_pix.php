@@ -166,20 +166,6 @@ document.getElementById('btnTogglePix').addEventListener('click', function() {
         }
     }
 
-    const input = document.getElementById('chave_pix');
-    
-    input.addEventListener('input', (e) => {
-        let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
-        
-        // Aplica a máscara progressivamente conforme o usuário digita
-        value = value.replace(/^(\d{2})(\d)/, '$1.$2');
-        value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
-        value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
-        value = value.replace(/(\d{4})(\d)/, '$1-$2');
-        
-        e.target.value = value.substring(0, 18); // Limita ao tamanho máximo do CNPJ com máscara
-    });
-
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
