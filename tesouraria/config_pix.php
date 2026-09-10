@@ -166,6 +166,18 @@ document.getElementById('btnTogglePix').addEventListener('click', function() {
         }
     }
 
+    document.querySelectorAll('chave_pix').forEach(elemento => {
+            let cnpjLimpo = elemento.textContent.replace(/\D/g, ''); // Garante que só há números
+            
+            if (cnpjLimpo.length === 14) {
+                // Aplica a máscara de CNPJ: 00.000.000/0000-00
+                elemento.textContent = cnpjLimpo.replace(
+                    /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, 
+                    "$1.$2.$3/$4-$5"
+                );
+            }
+        });
+
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
