@@ -24,7 +24,7 @@ $whatsapp_instance_id = trim($dados['whatsapp_instance_id'] ?? '');
 
 try {
     // Atualiza a tabela usuarios garantindo que o update ocorra apenas para o tenant logado
-    $sql = "UPDATE usuarios SET whatsapp_grupo_id = ? whatsapp_instance_id = ? WHERE id = ?";
+    $sql = "UPDATE usuarios SET whatsapp_grupo_id = ?, whatsapp_instance_id = ? WHERE id = ?";
     $stmt = $pdo->prepare($sql);
     $stmt->execute([$whatsapp_grupo_id, $whatsapp_instance_id, $tenant_id]);
 
