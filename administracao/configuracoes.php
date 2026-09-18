@@ -79,6 +79,11 @@ try {
                         </h5>
 
                         <div class="mb-4">
+                            <label class="form-label text-white">Nome do instancia da Loja</label>
+                            <input type="text" class="form-control" name="whatsapp_instance_id" id="whatsapp_instance_id" 
+                                   value="<?= htmlspecialchars($whatsapp_instance_id) ?>" 
+                                   placeholder="Ex: minhalojainstance">
+                            <small class="text-muted mt-2 d-block">Esta instancia será utilizada para disparar comunicados gerais aos obreiros.</small>
                             <label class="form-label text-white">ID do Grupo Oficial da Loja</label>
                             <input type="text" class="form-control" name="whatsapp_grupo_id" id="whatsapp_grupo_id" 
                                    value="<?= htmlspecialchars($whatsapp_grupo_id) ?>" 
