@@ -301,7 +301,7 @@ try {
                                             </span>
                                         </td>
                                         <td class="text-center">
-                                            <span class="badge bg-<?= $percFaltas > 50 ? 'danger' : ($percFreq <= 50 ? 'warning text-dark' : 'success') ?>">
+                                            <span class="badge bg-<?= $percFaltas > 50 ? 'danger' : ($percFreq <= 50 ? 'warning text-dark' : 'secondary') ?>">
                                                 <?= number_format($percFaltas, 1, ',', '.') ?>%
                                             </span>
                                         </td>
