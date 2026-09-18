@@ -16,6 +16,7 @@ try {
     $configAtual = $stmt->fetch(PDO::FETCH_ASSOC);
     
     $whatsapp_grupo_id = $configAtual['whatsapp_grupo_id'] ?? '';
+    whatsapp_instance_id = $configAtual['whatsapp_instance_id'] ?? '';
 } catch (PDOException $e) {
     die("Erro ao carregar configurações: " . $e->getMessage());
 }
