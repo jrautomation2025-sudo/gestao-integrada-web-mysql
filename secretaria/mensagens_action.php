@@ -44,11 +44,12 @@ try {
     if ($publico === 'grupo') {
         
         // Busca o ID do grupo na tabela de usuários vinculada ao tenant_id
-        $stmtGrupo = $pdo->prepare("SELECT whatsapp_grupo_id FROM usuarios WHERE id = ?");
+        $stmtGrupo = $pdo->prepare("SELECT whatsapp_grupo_id, whatsapp_instance_id FROM usuarios WHERE id = ?");
         $stmtGrupo->execute([$tenant_id]);
         $usuario = $stmtGrupo->fetch(PDO::FETCH_ASSOC);
 
         $id_grupo = $usuario['whatsapp_grupo_id'] ?? '';
+        $id_instance = $usuario['whatsapp_instance_id'] ?? '';
         
         if (empty($id_grupo)) {
             throw new Exception("O ID do Grupo do WhatsApp não está configurado. Por favor, atualize as configurações da sua conta.");
@@ -59,6 +60,7 @@ try {
 
         $payload_n8n[] = [
             'tipo' => 'grupo',
+            'instance' => $id_instance,
             'destino' => $id_grupo,
             'mensagem' => $msg_limpa
         ];
