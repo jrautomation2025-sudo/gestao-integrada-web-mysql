@@ -151,7 +151,7 @@
                                 <span class="badge bg-secondary text-white mb-2">Flexível</span>
                                 <h3 class="font-cinzel fw-bold h4">Plano Mensal</h3>
                                 <p class="text-muted small">Ideal para uso contínuo sem fidelidade</p>
-                                <div class="display-5 fw-bold text-gold my-3">R$ 49,<span class="fs-4">90</span></div>
+                                <div class="display-5 fw-bold text-gold my-3">R$ 59,<span class="fs-4">90</span></div>
                                 <p class="text-muted small mb-0">Cobrado mensalmente</p>
                             </div>
                             <ul class="list-unstyled text-muted small mb-4">
@@ -174,8 +174,8 @@
                                 <span class="badge bg-warning text-dark mb-2 fw-bold">Economia Máxima</span>
                                 <h3 class="font-cinzel fw-bold h4">Plano Anual</h3>
                                 <p class="text-muted small">Para uma gestão tranquila o ano todo</p>
-                                <div class="display-5 fw-bold text-gold my-3">R$ 499,<span class="fs-4">90</span></div>
-                                <p class="text-muted small mb-0">Equivale a aprox. R$ 41,65/mês</p>
+                                <div class="display-5 fw-bold text-gold my-3">R$ 599,<span class="fs-4">90</span></div>
+                                <p class="text-muted small mb-0">Equivale a aprox. R$ 49,99/mês</p>
                             </div>
                             <ul class="list-unstyled text-muted small mb-4">
                                 <li class="mb-2"><i class="fas fa-check text-gold me-2"></i> <strong>2 meses de economia</strong> comparado ao mensal</li>
