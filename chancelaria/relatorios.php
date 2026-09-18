@@ -45,20 +45,24 @@ try {
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } elseif ($tipoRelatorio === 'frequencia') {
-        $stmtTotalSessoes = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND status = 'Realizada'");
-        $stmtTotalSessoes->execute([$tenant_id]);
+        // CORREÇÃO: Adicionado o filtro de ano para bater com o formulário da página
+        $stmtTotalSessoes = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND status = 'Realizada' AND YEAR(data_sessao) = ?");
+        $stmtTotalSessoes->execute([$tenant_id, $anoSelecionado]);
         $totalSessoesGeral = (int)$stmtTotalSessoes->fetchColumn();
 
+        // CORREÇÃO: Filtra apenas presenças de sessões 'Realizada' e do ano selecionado.
+        // Uso de COUNT(DISTINCT) garante que registros duplicados acidentais não contem duas vezes.
         $sqlFreq = "SELECT m.id, m.nome, m.cim, m.grau,
-                    (SELECT COUNT(*) FROM chancelaria_presencas p 
+                    (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p 
                      JOIN chancelaria_sessoes s ON p.sessao_id = s.id 
-                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'P') as total_presencas
+                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'P' 
+                     AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_presencas
                     FROM chancelaria_membros m 
                     WHERE m.tenant_id = ? AND m.status = 'Ativo' AND m.presenca = 'obrigatoria'
                     ORDER BY m.nome ASC";
         
         $stmtFreq = $pdo->prepare($sqlFreq);
-        $stmtFreq->execute([$tenant_id, $tenant_id]);
+        $stmtFreq->execute([$tenant_id, $anoSelecionado, $tenant_id]);
         $dados = $stmtFreq->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (PDOException $e) {
@@ -275,6 +279,10 @@ try {
                                 <?php foreach ($dados as $f): ?>
                                     <?php 
                                         $presencas = (int)$f['total_presencas'];
+                                        
+                                        // Trava de segurança extra para limitar as presenças ao total de sessões
+                                        $presencas = min($presencas, $totalSessoesGeral);
+                                        
                                         $faltas = max(0, $totalSessoesGeral - $presencas);
                                         $percFreq = $totalSessoesGeral > 0 ? ($presencas / $totalSessoesGeral) * 100 : 0;
                                         $percFaltas = $totalSessoesGeral > 0 ? ($faltas / $totalSessoesGeral) * 100 : 0;
