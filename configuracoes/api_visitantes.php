@@ -44,7 +44,7 @@ if ($metodo === 'GET' && $action === 'individual') {
 
     try {
         if ($sessao_id && $tenant_id && $cim) {
-            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, 
+            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, u.whatsapp_instance_id, u.whatsapp_token,
                                     (select nome from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as loja_visitada,
                                     (select url_logo from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as logo_loja,
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'secretario') as secretario,
@@ -76,7 +76,7 @@ elseif ($metodo === 'GET' && $action === 'todos') {
 
     try {
         if ($sessao_id) {
-            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao,
+            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, u.whatsapp_instance_id, u.whatsapp_token,
                                     (select nome from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as loja_visitada,
                                     (select url_logo from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as logo_loja,
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'secretario') as secretario,
