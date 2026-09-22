@@ -102,7 +102,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'email' => $usuarioAlvo['email'],
                 'telefone' => $usuarioAlvo['telefone'],
                 'senha_limpa' => $senha_padrao,
-                'perfil' => $usuarioAlvo['perfil']
+                'perfil' => $usuarioAlvo['perfil'],
+                'instance' => $usuarioAlvo['whatsapp_instance_id'],
+                'token' => $usuarioAlvo['whatsapp_token']
             ]);
 
             $ch = curl_init($webhook_url);
