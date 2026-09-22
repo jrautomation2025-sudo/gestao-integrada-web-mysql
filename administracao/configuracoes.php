@@ -11,12 +11,13 @@ $tenant_id = $_SESSION['tenant_id'];
 
 try {
     // Busca as configurações atuais do usuário/tenant
-    $stmt = $pdo->prepare("SELECT whatsapp_grupo_id, whatsapp_instance_id FROM usuarios WHERE id = ?");
+    $stmt = $pdo->prepare("SELECT whatsapp_grupo_id, whatsapp_instance_id, whatsapp_token FROM usuarios WHERE id = ?");
     $stmt->execute([$tenant_id]);
     $configAtual = $stmt->fetch(PDO::FETCH_ASSOC);
     
     $whatsapp_grupo_id = $configAtual['whatsapp_grupo_id'] ?? '';
     $whatsapp_instance_id = $configAtual['whatsapp_instance_id'] ?? '';
+    $whatsapp_token = $configAtual['whatsapp_token'] ?? '';
 } catch (PDOException $e) {
     die("Erro ao carregar configurações: " . $e->getMessage());
 }
@@ -83,8 +84,13 @@ try {
                             <label class="form-label text-white">Nome do instancia da Loja</label>
                             <input type="text" class="form-control" name="whatsapp_instance_id" id="whatsapp_instance_id" 
                                    value="<?= htmlspecialchars($whatsapp_instance_id) ?>" 
-                                   placeholder="Ex: minhalojainstance">
+                                   placeholder="Ex: Nome da instancia">
                             <small class="text-muted mt-2 d-block">Esta instancia será utilizada para disparar comunicados gerais aos obreiros.</small>
+                            <label class="form-label text-white">Token gerado na api da Loja</label>
+                            <input type="text" class="form-control" name="whatsapp_token" id="whatsapp_token" 
+                                   value="<?= htmlspecialchars($whatsapp_token) ?>" 
+                                   placeholder="Ex: Token da loja">
+                            <small class="text-muted mt-2 d-block">Este token será utilizado para disparar comunicados gerais aos obreiros.</small>
                             <label class="form-label text-white">ID do Grupo Oficial da Loja</label>
                             <input type="text" class="form-control" name="whatsapp_grupo_id" id="whatsapp_grupo_id" 
                                    value="<?= htmlspecialchars($whatsapp_grupo_id) ?>" 
