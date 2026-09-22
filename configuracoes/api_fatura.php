@@ -128,7 +128,7 @@ if (!empty($dados->nome_cliente) && !empty($dados->valor) && !empty($dados->usua
     $qr_code_url = "https://quickchart.io/qr?size=300&text=" . urlencode($codigo_pix);
     
     // Hardcode da chave apenas para exibição visual no PDF (não afeta o QR Code)
-    $chave_pix_exibicao = $config['chave_pix'];
+    $chave_pix_exibicao = $chave_pix;
 
     // 4. MONTA O HTML DA FATURA (Agora com layout timbrado)
     $html = '
