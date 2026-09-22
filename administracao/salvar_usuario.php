@@ -159,6 +159,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     ':first_access' => $first_access,
                     ':dono_id' => $meu_tenant_id 
             ]);
+
+            $config = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+            $config->execute([$meu_tenant_id]);
+            $usuarioConf = $config->fetch(PDO::FETCH_ASSOC);
             
             // --- DISPARO DE WEBHOOK PARA O N8N (ENVIO DE EMAIL) ---
             $webhook_url = 'https://n8n-prod.jrtec.com.br/webhook/enviar-dados-usuario'; 
@@ -169,7 +173,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'email' => $email,
                 'telefone' => $telefone,
                 'senha_limpa' => $senha, 
-                'perfil' => $perfil
+                'perfil' => $perfil,
+                'instance' => $usuarioConf['whatsapp_instance_id'],
+                'token' => $usuarioConf['whatsapp_token']
             ]);
 
             $ch = curl_init($webhook_url);
