@@ -34,7 +34,7 @@ $metodo = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? null;
 
 // ==========================================
-// MÉTODO 1: BUSCAR DADOS DO VISITANTE (GET)
+// MÉTODO 1: BUSCAR DADOS DOS MEMBROS (GET)
 // ==========================================
 if ($metodo === 'GET' && $action === 'recibo') {
 
@@ -43,7 +43,7 @@ if ($metodo === 'GET' && $action === 'recibo') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email
+            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email, u.whatsapp_instance_id, u.whatsapp_token
                                         FROM clientes c
                                         LEFT JOIN mensalidades m ON c.id = m.cliente_id
                                         JOIN usuarios u ON c.usuario_id = u.id
@@ -74,7 +74,7 @@ elseif ($metodo === 'GET' && $action === 'recibo_individual') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email
+            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email, u.whatsapp_instance_id, u.whatsapp_token
                                         FROM clientes c
                                         LEFT JOIN mensalidades m ON c.id = m.cliente_id
                                         JOIN usuarios u ON c.usuario_id = u.id
@@ -107,9 +107,10 @@ elseif ($metodo === 'GET' && $action === 'individual') {
     try {
         if ($ano && $user_id &&  $membro && $parcela) {
             
-            $sql = "SELECT c.usuario_id, c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado
+            $sql = "SELECT c.usuario_id, c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, u.whatsapp_instance_id, u.whatsapp_token
                     FROM clientes c
                     LEFT JOIN mensalidades m ON c.id = m.cliente_id AND m.ano = :ano
+                    JOIN usuarios u ON c.usuario_id = u.id
                     WHERE c.usuario_id = :user_id
                     AND m.cliente_id = :membro
                     AND m.status in ('NOK','Pendente')
@@ -146,9 +147,10 @@ elseif ($metodo === 'GET' && $action === 'membros') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id
+            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id, u.whatsapp_instance_id, u.whatsapp_token
                                     FROM clientes c
                                     LEFT JOIN mensalidades m ON c.id = m.cliente_id
+                                    JOIN usuarios u ON c.usuario_id = u.id
                                     WHERE c.usuario_id = ?
                                     AND c.recolhe = 'Sim'
                                     AND m.status in ('NOK','Pendente')
@@ -174,9 +176,10 @@ elseif ($metodo === 'GET' && $action === 'filiado') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id
+            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id, u.whatsapp_instance_id, u.whatsapp_token
                                     FROM clientes c
                                     LEFT JOIN mensalidades m ON c.id = m.cliente_id
+                                    JOIN usuarios u ON c.usuario_id = u.id
                                     WHERE c.usuario_id = ?
                                     AND c.recolhe = 'Sim'
                                     AND m.status in ('NOK','Pendente')
@@ -196,7 +199,7 @@ elseif ($metodo === 'GET' && $action === 'filiado') {
 }
 
 // ==========================================
-// MÉTODO 2: ATUALIZAR VISITANTE (POST / PUT)
+// MÉTODO 2: ATUALIZAR MEMBROS (POST / PUT)
 // ==========================================
 elseif ($metodo === 'PUT' || $metodo === 'POST') {
     
