@@ -44,14 +44,15 @@ if ($metodo === 'GET' && $action === 'individual') {
 
     try {
         if ($sessao_id && $tenant_id && $cim) {
-            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao,
+            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, 
                                     (select nome from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as loja_visitada,
                                     (select url_logo from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as logo_loja,
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'secretario') as secretario,
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'veneravel') as veneravel,
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'chanceler') as chanceller
                                 FROM chancelaria_visitantes v 
-                                LEFT JOIN chancelaria_sessoes s ON s.id = v.sessao_id 
+                                LEFT JOIN chancelaria_sessoes s ON s.id = v.sessao_id
+                                JOIN usuarios u ON v.tenant_id = u.id
                                 WHERE v.tenant_id = ? AND v.sessao_id = ? AND v.cim = ?");
             $stmt->execute([$tenant_id,$sessao_id,$cim]);
             $visitante = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -83,6 +84,7 @@ elseif ($metodo === 'GET' && $action === 'todos') {
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'chanceler') as chanceller
                                 FROM chancelaria_visitantes v 
                                 LEFT JOIN chancelaria_sessoes s ON s.id = v.sessao_id 
+                                JOIN usuarios u ON v.tenant_id = u.id
                                 WHERE v.tenant_id = ? AND v.sessao_id = ?");
             $stmt->execute([$tenant_id,$sessao_id]);
             $visitante = $stmt->fetchAll(PDO::FETCH_ASSOC);
