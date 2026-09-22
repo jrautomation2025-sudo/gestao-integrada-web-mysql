@@ -21,12 +21,13 @@ if (!$dados) {
 // Limpa e extrai os dados
 $whatsapp_grupo_id = trim($dados['whatsapp_grupo_id'] ?? '');
 $whatsapp_instance_id = trim($dados['whatsapp_instance_id'] ?? '');
+$whatsapp_token = trim($dados['whatsapp_token'] ?? '');
 
 try {
     // Atualiza a tabela usuarios garantindo que o update ocorra apenas para o tenant logado
-    $sql = "UPDATE usuarios SET whatsapp_grupo_id = ?, whatsapp_instance_id = ? WHERE id = ?";
+    $sql = "UPDATE usuarios SET whatsapp_grupo_id = ?, whatsapp_instance_id = ?, whatsapp_token = ? WHERE id = ?";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$whatsapp_grupo_id, $whatsapp_instance_id, $tenant_id]);
+    $stmt->execute([$whatsapp_grupo_id, $whatsapp_instance_id, $whatsapp_token, $tenant_id]);
 
     echo json_encode(['sucesso' => true, 'mensagem' => 'Configurações salvas com sucesso!']);
 } catch (Exception $e) {
