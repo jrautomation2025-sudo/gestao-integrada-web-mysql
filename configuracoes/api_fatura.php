@@ -126,9 +126,25 @@ if (!empty($dados->nome_cliente) && !empty($dados->valor) && !empty($dados->usua
     $codigo_pix = $pix->getPayload();
     
     $qr_code_url = "https://quickchart.io/qr?size=300&text=" . urlencode($codigo_pix);
+
+    // Função auxiliar para aplicar a máscara (pode colocar no topo do arquivo ou arquivo de funções)
+    function mascaraCpfCnpj($valor) {
+        // Remove tudo o que não for número
+        $valor = preg_replace('/\D/', '', $valor);
     
+        if (strlen($valor) === 11) {
+            // Formato CPF: 000.000.000-00
+            return preg_replace('/(\d{3})(\d{3})(\d{3})(\d{2})/', '$1.$2.$3-$4', $valor);
+        } elseif (strlen($valor) === 14) {
+            // Formato CNPJ: 00.000.000/0000-00
+            return preg_replace('/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/', '$1.$2.$3/$4-$5', $valor);
+        }
+        // Retorna o valor original caso não tenha 11 ou 14 dígitos (ex: e-mail, telefone, chave aleatória)
+        return $valor;
+    }
+
     // Hardcode da chave apenas para exibição visual no PDF (não afeta o QR Code)
-    $chave_pix_exibicao = $chave_pix;
+    $chave_pix_exibicao = mascaraCpfCnpj($chave_pix);
 
     // 4. MONTA O HTML DA FATURA (Agora com layout timbrado)
     $html = '
