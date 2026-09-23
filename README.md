@@ -53,3 +53,4 @@ DB_HOST=nome_do_servico_mysql
 DB_NAME=seu_banco_de_dados
 DB_USER=usuario_do_banco
 DB_PASS=senha_do_banco
+DB_PORT=porta_do_banco
