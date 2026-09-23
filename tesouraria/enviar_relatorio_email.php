@@ -329,7 +329,8 @@ try {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "POST");
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payloadN8N));
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json'
+        'Content-Type: application/json',
+        'x-gestao-api-key: ' . getenv('API_TOKEN')
     ]);
     
     $responseN8N = curl_exec($ch);
