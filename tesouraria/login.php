@@ -156,15 +156,55 @@
     </div>
 
     <script>
+    const N8N_TURNSTILE_WEBHOOK = 'https://n8n-prod.jrtec.com.br/webhook/cloudflare-login';
+    
     document.getElementById('formLogin').addEventListener('submit', function(e) {
     e.preventDefault();
-    const btn = document.querySelector('button[type="submit"]');
-    const msgErro = document.getElementById('msgErro');
-    const formData = new FormData(this);
+        
+        const btn = document.querySelector('button[type="submit"]');
+        const msgErro = document.getElementById('msgErro');
+        const formData = new FormData(this);
 
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
-    msgErro.style.display = 'none';
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+        msgErro.style.display = 'none';
+
+        // --- PASSO 1: COLETAR E VALIDAR O TOKEN DO TURNSTILE LOCALMENTE ---
+        const turnstileResponse = document.querySelector('[name="cf-turnstile-response"]')?.value;
+
+        if (!turnstileResponse) {
+            msgErro.innerText = 'Por favor, complete a validação de segurança (Captcha).';
+            msgErro.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = 'ENTRAR';
+            return;
+        }
+
+        // --- PASSO 2: INVOCAR O WEBHOOK DO N8N PARA VERIFICAÇÃO DE SEGURANÇA ---
+        try {
+            const n8nForm = new FormData();
+            n8nForm.append('cf-turnstile-token', turnstileResponse);
+
+            const n8nCheck = await fetch(N8N_TURNSTILE_WEBHOOK, {
+                method: 'POST',
+                body: n8nForm
+            });
+
+            if (!n8nCheck.ok) {
+                throw new Error('Falha na validação de segurança. Acesso recusado.');
+            }
+            
+            // Se o n8n respondeu com sucesso (Status 200), podemos adicionar o token no formData local se necessário
+            formData.append('captcha_validado', 'true');
+
+        } catch (error) {
+            msgErro.innerText = error.message || 'Erro ao validar o sistema de segurança. Tente novamente.';
+            msgErro.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = 'ENTRAR';
+            if (typeof turnstile !== 'undefined') turnstile.reset(); // Reseta o captcha para nova tentativa
+            return; // Bloqueia a execução dos passos seguintes
+        }
 
     fetch('../configuracoes/auth?action=login', {
         method: 'POST',
