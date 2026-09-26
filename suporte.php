@@ -48,7 +48,7 @@
                     Precisa de ajuda com o acesso, encontrou algum erro no sistema ou quer abrir um chamado técnico? Acesse nossa central oficial de atendimento.
                 </p>
                 
-                <a href="https://jrtec.atlassian.net/servicedesk/customer/portal/1" target="_blank" class="btn btn-gold rounded-pill shadow">
+                <a href="https://suporte.jrtec.com.br/" target="_blank" class="btn btn-gold rounded-pill shadow">
                     <i class="fas fa-external-link-alt me-2"></i> Acessar Portal de Chamados
                 </a>
 
