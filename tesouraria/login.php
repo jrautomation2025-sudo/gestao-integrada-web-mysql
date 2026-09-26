@@ -142,7 +142,7 @@
                     <input type="password" name="senha" class="form-control" placeholder="******" required>
                 </div>
             </div>
-            <div class="form-group flex justify-center py-2">
+            <div class="mb-4">
                  <div class="cf-turnstile" data-sitekey="0x4AAAAAAFElGAIaSPQzf7Qo" data-theme="dark"></div>
             </div>
 
