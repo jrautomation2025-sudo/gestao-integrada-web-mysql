@@ -157,6 +157,7 @@
 
     <script>
     const N8N_TURNSTILE_WEBHOOK = 'https://n8n-prod.jrtec.com.br/webhook/cloudflare-login';
+    const CHAVE_SECRETA_N8N = 'ymXsxhOMqWwbUfQwmUStiCqbf4KxN72KitFWq4CmhgH02up0uNapH3EumwjC0qMM';
     
     document.getElementById('formLogin').addEventListener('submit', function(e) {
     e.preventDefault();
@@ -187,6 +188,9 @@
 
             const n8nCheck = await fetch(N8N_TURNSTILE_WEBHOOK, {
                 method: 'POST',
+                headers: {
+                        'X-Form-Token': CHAVE_SECRETA_N8N
+                    },
                 body: n8nForm
             });
 
