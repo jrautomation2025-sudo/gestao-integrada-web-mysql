@@ -9,6 +9,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     
     <style>
         :root {
@@ -140,6 +141,9 @@
                     <span class="input-group-text bg-dark border-secondary text-light"><i class="fas fa-lock"></i></span>
                     <input type="password" name="senha" class="form-control" placeholder="******" required>
                 </div>
+            </div>
+            <div class="form-group flex justify-center py-2">
+                 <div class="cf-turnstile" data-sitekey="0x4AAAAAAFElGAIaSPQzf7Qo" data-theme="dark"></div>
             </div>
 
             <button type="submit" class="btn btn-gold mb-3" id="btnEntrar">
