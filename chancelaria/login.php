@@ -200,7 +200,7 @@
             const data = await response.json();
 
             if (data.status === 'success') {
-                window.location.href = './inicio';
+                window.location.href = './dashboard';
             } 
             else if (data.status === '2fa_required') {
                 btn.innerHTML = 'ENTRAR <i class="fas fa-arrow-right ms-2"></i>';
@@ -238,7 +238,7 @@
                     allowOutsideClick: () => !Swal.isLoading()
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        window.location.href = './inicio';
+                        window.location.href = './dashboard';
                     }
                 });
             }
@@ -331,12 +331,12 @@
                                         background: '#1e293b',
                                         color: '#fff'
                                     }).then(() => {
-                                        window.location.href = './inicio';
+                                        window.location.href = './dashboard';
                                     });
                                 }
                             });
                         } else {
-                            window.location.href = './inicio';
+                            window.location.href = './dashboard';
                         }
                     }
                 });
