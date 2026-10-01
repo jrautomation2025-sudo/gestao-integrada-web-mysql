@@ -47,7 +47,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $nomeMembro = $clienteInfo['nome'];
                 $valorMensalidade = $clienteInfo['valor_mensalidade'] ?? 0.00;
                 $descricaoTransacao = "Pagamento de mesalidade do irmão " . $nomeMembro;
-                $dataAtual = date('Y-m-d');
+                
+                $diaAtual = (int)date('j'); 
+                // Verifica se o dia atual está na lista (1, 2 ou 3)
+                if ($diaAtual === 1) {
+                    $dataAtual = date('Y-m-d', strtotime('-1 day'));
+                } elseif ($diaAtual === 2) {
+                   $dataAtual = date('Y-m-d', strtotime('-2 day'));
+                } elseif ($diaAtual === 3) {
+                   $dataAtual = date('Y-m-d', strtotime('-3 day'));
+                } else {
+                   $dataAtual = date('Y-m-d');
+                }
+                
                 $tipoTransacao = 'mensalidade'; // ou Crédito, dependendo da estrutura da sua tabela de transações
 
                 // Insere na tabela transacoes (ajuste o nome das colunas caso sua tabela seja diferente, ex: usuario_id ou tenant_id)
