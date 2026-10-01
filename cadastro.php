@@ -8,6 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     
     <style>
         :root { --bg-dark: #0f172a; --bg-card: #1e293b; --gold: #cfa34e; --text-light: #e2e8f0; }
@@ -103,6 +104,10 @@
                 </select>
             </div>
 
+            <div class="mb-4" style="display: flex; justify-content: center;">
+                 <div class="cf-turnstile" data-sitekey="0x4AAAAAAFElGAIaSPQzf7Qo" data-theme="dark"></div>
+            </div>
+
             <button type="submit" class="btn btn-gold mb-3" id="btnCadastrar" disabled>
                 CRIAR CONTA <i class="fas fa-check ms-2"></i>
             </button>
@@ -187,6 +192,9 @@
             }
         }
 
+        const N8N_TURNSTILE_WEBHOOK = 'https://n8n-prod.jrtec.com.br/webhook/cloudflare-login';
+        const CHAVE_SECRETA_N8N = 'ymXsxhOMqWwbUfQwmUStiCqbf4KxN72KitFWq4CmhgH02up0uNapH3EumwjC0qMM';
+
         document.getElementById('formCadastro').addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -201,6 +209,43 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Criando...';
             btn.disabled = true;
             msgErro.style.display = 'none';
+
+        // --- PASSO 1: COLETAR E VALIDAR O TOKEN DO TURNSTILE LOCALMENTE ---
+        const turnstileResponse = document.querySelector('[name="cf-turnstile-response"]')?.value;
+
+        if (!turnstileResponse) {
+            msgErro.innerText = 'Por favor, complete a validação de segurança (Captcha).';
+            msgErro.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = 'CRIAR CONTA <i class="fas fa-arrow-right ms-2"></i>';
+            return;
+        }
+
+        // --- PASSO 2: INVOCAR O WEBHOOK DO N8N PARA VERIFICAÇÃO DE SEGURANÇA ---
+        try {
+            const n8nCheck = await fetch(N8N_TURNSTILE_WEBHOOK, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Form-Token': CHAVE_SECRETA_N8N
+                },
+                body: JSON.stringify({ 'cf-turnstile-token': turnstileResponse })
+            });
+
+            if (!n8nCheck.ok) {
+                throw new Error('Falha na validação de segurança. Acesso recusado.');
+            }
+            
+            formData.append('captcha_validado', 'true');
+
+        } catch (error) {
+            msgErro.innerText = error.message || 'Erro ao validar o sistema de segurança. Tente novamente.';
+            msgErro.style.display = 'block';
+            btn.disabled = false;
+            btn.innerHTML = 'ENTRAR <i class="fas fa-arrow-right ms-2"></i>';
+            if (typeof turnstile !== 'undefined') turnstile.reset();
+            return;
+        }
 
             fetch('configuracoes/auth?action=register', {
                 method: 'POST',
