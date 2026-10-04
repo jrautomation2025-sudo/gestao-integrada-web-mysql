@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (typeof turnstile !== 'undefined') turnstile.reset();
             return;
         }
-    }
+    });
 </script>
 </body>
 </html>
