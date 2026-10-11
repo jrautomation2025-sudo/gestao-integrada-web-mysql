@@ -27,18 +27,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo'])) {
 
     if (!empty($titulo) && !empty($data_sessao)) {
         try {
+            $pdo->beginTransaction();
+
             if (!empty($id)) {
-                // Atualizar
+                // Atualizar Sessão
                 $stmt = $pdo->prepare("UPDATE chancelaria_sessoes SET titulo = ?, data_sessao = ?, hora_sessao = ?, tipo = ?, grau = ?, status = ?, valor = ? WHERE id = ? AND tenant_id = ?");
                 $stmt->execute([$titulo, $data_sessao, $hora_sessao, $tipo, $grau, $status, $valor, $id, $tenant_id]);
                 $_SESSION['mensagem'] = "Sessão atualizada com sucesso!";
             } else {
-                // Inserir
+                // Inserir Sessão
                 $stmt = $pdo->prepare("INSERT INTO chancelaria_sessoes (tenant_id, titulo, data_sessao, hora_sessao, tipo, grau, status, valor, token_presenca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$tenant_id, $titulo, $data_sessao, $hora_sessao, $tipo, $grau, $status, $valor, $token_presenca]);
-                $_SESSION['mensagem'] = "Sessão cadastrada com sucesso!";
+                
+                // Recupera o ID da sessão recém-criada
+                $sessao_id = $pdo->lastInsertId();
+
+                // Lógica para adicionar justificativa automática baseada no Grau da Sessão
+                $grausPermitidosParaJustificar = [];
+                if ($grau == '2') {
+                    // Sessão de Grau 2: Aprendizes (grau 1) não entram
+                    $grausPermitidosParaJustificar = ['Aprendiz'];
+                } elseif ($grau == '3') {
+                    // Sessão de Grau 3: Aprendizes (1) e Companheiros (2) não entram
+                    $grausPermitidosParaJustificar = ['Aprendiz', 'Companheiro'];
+                }
+
+                if (!empty($grausPermitidosParaJustificar)) {
+                    // Monta placeholders para a consulta IN (?, ?)
+                    $placeholders = implode(',', array_fill(0, count($grausPermitidosParaJustificar), '?'));
+                    
+                    // Busca os membros que não possuem o grau exigido para esta sessão
+                    $sqlMembros = "SELECT id FROM chancelaria_membròs WHERE tenant_id = ? AND grau IN ($placeholders) AND status = 'Ativo'";
+                    
+                    // Ajuste caso o nome da tabela no seu banco seja estritamente 'chancelaria_membros' (conforme o print)
+                    $sqlMembros = "SELECT id FROM chancelaria_membros WHERE tenant_id = ? AND grau IN ($placeholders)";
+                    
+                    $paramsMembros = array_merge([$tenant_id], $grausPermitidosParaJustificar);
+                    $stmtMembros = $pdo->prepare($sqlMembros);
+                    $stmtMembros->execute($paramsMembros);
+                    $membrosInativeis = $stmtMembros->fetchAll(PDO::FETCH_ASSOC);
+
+                    // Insere o registro de justificativa na tabela chancelaria_presencas para cada membro
+                    $stmtPresenca = $pdo->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca, justificativa, created_at) VALUES (?, ?, ?, 'J', ?, NOW())");
+
+                    foreach ($membrosInativeis as $membro) {
+                        $textoJustificativa = "Ausência automática: Grau incompatível com a sessão (" . $grau . "º Grau).";
+                        $stmtPresenca->execute([$tenant_id, $sessao_id, $membro['id'], $textoJustificativa]);
+                    }
+                }
+
+                $_SESSION['mensagem'] = "Sessão cadastrada e justificativas aplicadas com sucesso!";
             }
+
+            $pdo->commit();
         } catch (PDOException $e) {
+            $pdo->rollBack();
             $_SESSION['erro'] = "Erro ao salvar no banco de dados: " . $e->getMessage();
         }
     } else {
