@@ -40,7 +40,7 @@ try {
             INNER JOIN chancelaria_presencas p ON m.id = p.membro_id 
             WHERE m.tenant_id = ? 
             AND p.sessao_id = ? 
-            AND p.status_presenca = 'P'
+            AND p.status_presenca in ('P','J')
             ORDER BY m.nome ASC
         ");
         $stmtPresentes->execute([$tenant_id, $sessao_id]);
