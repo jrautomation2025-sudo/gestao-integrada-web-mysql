@@ -283,8 +283,8 @@ try {
                             <?php if (count($dados) > 0): ?>
                                 <?php foreach ($dados as $f): ?>
                                     <?php 
-                                        $presencas = (int)$f['total_presencas'];
-                                        $justificativas = (int)$f['total_justificativas'];
+                                        $presencas = (int)$f['total_presencas'] ?? 0;
+                                        $justificativas = (int)$f['total_justificativas'] ?? 0;
                                         
                                         // Trava de segurança extra para limitar as presenças ao total de sessões
                                         $presencas = min($presencas, $totalSessoesGeral - $justificativas);
