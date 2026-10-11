@@ -44,29 +44,33 @@ try {
         $stmt->execute([$tenant_id, $anoSelecionado]);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    } elseif ($tipoRelatorio === 'frequencia') {
-        // CORREÇÃO: Adicionado o filtro de ano para bater com o formulário da página
+   } elseif ($tipoRelatorio === 'frequencia') {
+        // Busca o total de sessões realizadas no ano selecionado
         $stmtTotalSessoes = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND status = 'Realizada' AND YEAR(data_sessao) = ?");
         $stmtTotalSessoes->execute([$tenant_id, $anoSelecionado]);
         $totalSessoesGeral = (int)$stmtTotalSessoes->fetchColumn();
 
-        // CORREÇÃO: Filtra apenas presenças de sessões 'Realizada' e do ano selecionado.
-        // Uso de COUNT(DISTINCT) garante que registros duplicados acidentais não contem duas vezes.
+        // Query de frequência contendo os 6 parâmetros necessários (2 para presenças, 2 para justificativas e 2 para a tabela de membros)
         $sqlFreq = "SELECT m.id, m.nome, m.cim, m.grau,
-                    (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p 
-                     JOIN chancelaria_sessoes s ON p.sessao_id = s.id 
-                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'P' 
+                    (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p  
+                     JOIN chancelaria_sessoes s ON p.sessao_id = s.id  
+                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'P'  
                      AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_presencas,
-                     (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p 
-                     JOIN chancelaria_sessoes s ON p.sessao_id = s.id 
-                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'J' 
+                     (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p  
+                     JOIN chancelaria_sessoes s ON p.sessao_id = s.id  
+                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'Justificado'  
                      AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_justificativas 
-                    FROM chancelaria_membros m 
+                    FROM chancelaria_membros m  
                     WHERE m.tenant_id = ? AND m.status = 'Ativo' AND m.presenca = 'obrigatoria'
                     ORDER BY m.nome ASC";
         
         $stmtFreq = $pdo->prepare($sqlFreq);
-        $stmtFreq->execute([$tenant_id, $anoSelecionado, $tenant_id]);
+        // Passando exatamente os 6 valores correspondentes aos '?' da query na ordem correta
+        $stmtFreq->execute([
+            $tenant_id, $anoSelecionado, // Para o subselect de presenças
+            $tenant_id, $anoSelecionado, // Para o subselect de justificativas
+            $tenant_id                  // Para a listagem de membros principais
+        ]);
         $dados = $stmtFreq->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (PDOException $e) {
