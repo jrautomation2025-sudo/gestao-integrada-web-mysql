@@ -284,19 +284,22 @@ try {
                             </tr>
                         </thead>
                         <tbody>
-                            <?php if (count($dados) > 0): ?>
-                                <?php foreach ($dados as $f): ?>
-                                    <?php 
-                                        $presencas = (int)$f['total_presencas'] ?? 0;
-                                        $justificativas = (int)$f['total_justificativas'] ?? 0;
-                                        
-                                        // Trava de segurança extra para limitar as presenças ao total de sessões
-                                        $presencas = min($presencas, $totalSessoesGeral - $justificativas);
-                                        
-                                        $faltas = max(0, $totalSessoesGeral - $presencas - $justificativas);
-                                        $percFreq = $totalSessoesGeral > 0 ? ($presencas / $totalSessoesGeral) * 100 : 0;
-                                        $percFaltas = $totalSessoesGeral > 0 ? ($faltas / $totalSessoesGeral) * 100 : 0;
+                            <?php foreach ($dados as $f): ?>
+                               <?php    
+                                    $presencas = (int)$f['total_presencas'] ?? 0;
+                                    $justificativas = (int)$f['total_justificativas'] ?? 0;
+            
+                                    // Total de sessões nas quais o obreiro tinha a obrigação de participar (excluindo as justificadas)
+                                    $sessoesElegiveis = $totalSessoesGeral - $justificativas;
+            
+                                    // Faltas reais (tudo o que não foi presença e nem foi justificado)
+                                    $faltas = max(0, $totalSessoesGeral - $presencas - $justificativas);
+            
+                                    // Percentuais calculados com base nas sessões elegíveis (removendo as justificativas do cálculo)
+                                    $percFreq = $sessoesElegiveis > 0 ? ($presencas / $sessoesElegiveis) * 100 : 0;
+                                    $percFaltas = $sessoesElegiveis > 0 ? ($faltas / $sessoesElegiveis) * 100 : 0;
                                     ?>
+                                    <!-- Linha da tabela... -->
                                     <tr>
                                         <td>
                                             <div class="fw-bold text-white"><?= htmlspecialchars($f['nome']) ?></div>
