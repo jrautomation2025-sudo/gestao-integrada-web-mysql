@@ -56,7 +56,11 @@ try {
                     (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p 
                      JOIN chancelaria_sessoes s ON p.sessao_id = s.id 
                      WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'P' 
-                     AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_presencas
+                     AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_presencas,
+                     (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p 
+                     JOIN chancelaria_sessoes s ON p.sessao_id = s.id 
+                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'J' 
+                     AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_justificativas 
                     FROM chancelaria_membros m 
                     WHERE m.tenant_id = ? AND m.status = 'Ativo' AND m.presenca = 'obrigatoria'
                     ORDER BY m.nome ASC";
@@ -280,11 +284,12 @@ try {
                                 <?php foreach ($dados as $f): ?>
                                     <?php 
                                         $presencas = (int)$f['total_presencas'];
+                                        $justificativas = (int)$f['total_justificativas'];
                                         
                                         // Trava de segurança extra para limitar as presenças ao total de sessões
-                                        $presencas = min($presencas, $totalSessoesGeral);
+                                        $presencas = min($presencas, $totalSessoesGeral - $justificativas);
                                         
-                                        $faltas = max(0, $totalSessoesGeral - $presencas);
+                                        $faltas = max(0, $totalSessoesGeral - $presencas - $justificativas);
                                         $percFreq = $totalSessoesGeral > 0 ? ($presencas / $totalSessoesGeral) * 100 : 0;
                                         $percFaltas = $totalSessoesGeral > 0 ? ($faltas / $totalSessoesGeral) * 100 : 0;
                                     ?>
