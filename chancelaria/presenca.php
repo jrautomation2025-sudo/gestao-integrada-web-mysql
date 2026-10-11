@@ -215,10 +215,10 @@ try {
                                     <td><span>Loja Fraternidade Carpinense N° 4028</span></td>
                                     <td><span class="badge bg-secondary">Grau <?= htmlspecialchars($p['grau']) ?></span></td>
                                     <td class="text-center">
-                                        <?php if ($p['status_presenca'] == 'J') ?>
-                                           <span class="badge bg-warning">Justificado</span>
+                                        <?php if ($p['status_presenca'] == 'J' || $p['status_presenca'] == 'Justificado'): ?>
+                                             <span class="badge bg-warning">Justificado</span>
                                         <?php else: ?>
-                                           <span class="badge bg-success">Justificado</span>
+                                             <span class="badge bg-success">Outro Status</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center no-print">
