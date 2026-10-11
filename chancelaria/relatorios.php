@@ -16,7 +16,7 @@ $anoSelecionado = $_GET['ano'] ?? date('Y');
 $anosDisponiveis = [];
 
 try {
-    // Busca os anos disponíveis para o select de filtro (independente do relatório escolhido, para o caso de precisar depois)
+    // Busca os anos disponíveis para o select de filtro
     $stmtAnos = $pdo->prepare("SELECT DISTINCT YEAR(data_sessao) as ano FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY ano DESC");
     $stmtAnos->execute([$tenant_id]);
     $anosDisponiveis = $stmtAnos->fetchAll(PDO::FETCH_COLUMN);
@@ -32,7 +32,6 @@ try {
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } elseif ($tipoRelatorio === 'sessoes') {
-        // Filtro de ano adicionado na Query de Sessões
         $stmt = $pdo->prepare("SELECT s.*, 
                                (SELECT COUNT(*) FROM chancelaria_presencas p WHERE p.sessao_id = s.id AND p.status_presenca = 'P') as presentes,
                                (SELECT COUNT(*) FROM chancelaria_visitantes p WHERE p.sessao_id = s.id ) as visitantes 
@@ -44,13 +43,13 @@ try {
         $stmt->execute([$tenant_id, $anoSelecionado]);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-   } elseif ($tipoRelatorio === 'frequencia') {
+    } elseif ($tipoRelatorio === 'frequencia') {
         // Busca o total de sessões realizadas no ano selecionado
         $stmtTotalSessoes = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND status = 'Realizada' AND YEAR(data_sessao) = ?");
         $stmtTotalSessoes->execute([$tenant_id, $anoSelecionado]);
         $totalSessoesGeral = (int)$stmtTotalSessoes->fetchColumn();
 
-        // Query de frequência contendo os 6 parâmetros necessários (2 para presenças, 2 para justificativas e 2 para a tabela de membros)
+        // Query de frequência contendo os 6 parâmetros necessários
         $sqlFreq = "SELECT m.id, m.nome, m.cim, m.grau,
                     (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p  
                      JOIN chancelaria_sessoes s ON p.sessao_id = s.id  
@@ -65,11 +64,10 @@ try {
                     ORDER BY m.nome ASC";
         
         $stmtFreq = $pdo->prepare($sqlFreq);
-        // Passando exatamente os 6 valores correspondentes aos '?' da query na ordem correta
         $stmtFreq->execute([
-            $tenant_id, $anoSelecionado, // Para o subselect de presenças
-            $tenant_id, $anoSelecionado, // Para o subselect de justificativas
-            $tenant_id                  // Para a listagem de membros principais
+            $tenant_id, $anoSelecionado, 
+            $tenant_id, $anoSelecionado, 
+            $tenant_id                  
         ]);
         $dados = $stmtFreq->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -100,7 +98,6 @@ try {
         .form-select { background-color: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); }
         .form-select:focus { border-color: var(--gold); box-shadow: 0 0 0 0.25rem rgba(245, 192, 65, 0.25); color: var(--text-main); }
 
-        /* Garantindo texto claro nas tabelas */
         .table-dark-custom { color: var(--text-main); vertical-align: middle; }
         .table-dark-custom thead th { background-color: rgba(0,0,0,0.2); color: var(--gold); border-bottom: 2px solid var(--border-color); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
         .table-dark-custom tbody td { border-bottom: 1px solid var(--border-color); padding: 15px 10px; background: transparent; color: #e2e8f0 !important; }
@@ -118,7 +115,7 @@ try {
     </style>
 </head>
 <body>
-    <!-- Barra Superior Mobile (Visível apenas em celulares) -->
+
 <div class="mobile-topbar">
     <div class="d-flex align-items-center">
         <button class="btn btn-outline-warning btn-sm me-3" onclick="toggleMobileMenu()">
@@ -129,80 +126,78 @@ try {
     <span class="text-white small">Painel</span>
 </div>
 
-<!-- Backdrop escuro para fechar o menu ao clicar fora -->
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleMobileMenu()"></div>
 
-    <div class="no-print">
-        <?php include 'menu.php'; ?>
+<div class="no-print">
+    <?php include 'menu.php'; ?>
+</div>
+
+<main class="main-content">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+            <h2 style="font-family: 'Cinzel', serif; font-weight: 700; color: white; font-size: 1.8rem;"><i class="fas fa-print me-2 text-warning"></i> Relatórios do Sistema</h2>
+            <p class="text-warning">Gere listagens e relatórios analíticos da Oficina.</p>
+        </div>
+        <button onclick="window.print()" class="btn btn-warning">
+            <i class="fas fa-print me-2"></i> Imprimir / Salvar PDF
+        </button>
     </div>
 
-    <main class="main-content">
-        <div class="page-header d-flex justify-content-between align-items-center mb-4 no-print">
-            <div>
-                <h2 style="font-family: 'Cinzel', serif; font-weight: 700; color: white; font-size: 1.8rem;"><i class="fas fa-print me-2 text-warning"></i> Relatórios do Sistema</h2>
-                <p class="text-warning">Gere listagens e relatórios analíticos da Oficina.</p>
+    <div class="card-custom mb-4 no-print">
+        <form method="GET" action="relatorios.php" class="row align-items-end g-3">
+            <div class="col-md-6">
+                <label class="form-label text-white fw-bold">Selecione o Relatório</label>
+                <select name="tipo" class="form-select" onchange="this.form.submit()">
+                    <option value="obreiros" <?= $tipoRelatorio === 'obreiros' ? 'selected' : '' ?>>Quadro de Obreiros Ativos</option>
+                    <option value="sessoes" <?= $tipoRelatorio === 'sessoes' ? 'selected' : '' ?>>Histórico de Sessões e Frequência</option>
+                    <option value="frequencia" <?= $tipoRelatorio === 'frequencia' ? 'selected' : '' ?>>Frequência Individual e Percentual de Faltas</option>
+                </select>
             </div>
-            <button onclick="window.print()" class="btn btn-warning">
-                <i class="fas fa-print me-2"></i> Imprimir / Salvar PDF
-            </button>
+            
+            <?php if ($tipoRelatorio === 'sessoes' || $tipoRelatorio === 'frequencia'): ?>
+            <div class="col-md-3">
+                <label class="form-label text-white fw-bold">Selecione o Ano</label>
+                <select name="ano" class="form-select" onchange="this.form.submit()">
+                    <?php foreach ($anosDisponiveis as $ano): ?>
+                        <option value="<?= $ano ?>" <?= $ano == $anoSelecionado ? 'selected' : '' ?>><?= $ano ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+        </form>
+    </div>
+
+    <div class="card-custom">
+        <div class="text-center mb-4 d-none d-print-block">
+            <h3 style="font-family: 'Cinzel', serif; font-weight: bold;">GESTÃO DE CHANCELARIA</h3>
+            <h5 class="text-muted">
+                Relatório Oficial: 
+                <?= $tipoRelatorio === 'obreiros' ? 'Quadro de Obreiros' : ($tipoRelatorio === 'sessoes' ? 'Histórico de Sessões (' . $anoSelecionado . ')' : 'Frequência e Percentual de Faltas') ?>
+            </h5>
+            <hr>
         </div>
 
-        <div class="card-custom mb-4 no-print">
-            <form method="GET" action="relatorios.php" class="row align-items-end g-3">
-                <div class="col-md-6">
-                    <label class="form-label text-white fw-bold">Selecione o Relatório</label>
-                    <select name="tipo" class="form-select" onchange="this.form.submit()">
-                        <option value="obreiros" <?= $tipoRelatorio === 'obreiros' ? 'selected' : '' ?>>Quadro de Obreiros Ativos</option>
-                        <option value="sessoes" <?= $tipoRelatorio === 'sessoes' ? 'selected' : '' ?>>Histórico de Sessões e Frequência</option>
-                        <option value="frequencia" <?= $tipoRelatorio === 'frequencia' ? 'selected' : '' ?>>Frequência Individual e Percentual de Faltas</option>
-                    </select>
-                </div>
-                
-                <!-- Filtro de Ano: Só aparece quando o relatório é de sessões -->
-                <?php if ($tipoRelatorio === 'sessoes' || $tipoRelatorio === 'frequencia'): ?>
-                <div class="col-md-3">
-                    <label class="form-label text-white fw-bold">Selecione o Ano</label>
-                    <select name="ano" class="form-select" onchange="this.form.submit()">
-                        <?php foreach ($anosDisponiveis as $ano): ?>
-                            <option value="<?= $ano ?>" <?= $ano == $anoSelecionado ? 'selected' : '' ?>><?= $ano ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <?php endif; ?>
-            </form>
-        </div>
-
-        <div class="card-custom">
-            <div class="text-center mb-4 d-none d-print-block">
-                <h3 style="font-family: 'Cinzel', serif; font-weight: bold;">GESTÃO DE CHANCELARIA</h3>
-                <h5 class="text-muted">
-                    Relatório Oficial: 
-                    <?= $tipoRelatorio === 'obreiros' ? 'Quadro de Obreiros' : ($tipoRelatorio === 'sessoes' ? 'Histórico de Sessões (' . $anoSelecionado . ')' : 'Frequência e Percentual de Faltas') ?>
-                </h5>
-                <hr>
-            </div>
-
-            <div class="table-responsive">
-                <?php if ($tipoRelatorio === 'obreiros'): ?>
-                    <table class="table table-dark-custom">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>CIM</th>
-                                <th>Grau</th>
-                                <th>Cargo</th>
-                                <th>Status</th>
-                                <th>Contato</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($dados) > 0): ?>
-                                <?php foreach ($dados as $m): ?>
-                                    <tr>
-                                        <td class="fw-bold text-white"><?= htmlspecialchars($m['nome']) ?></td>
-                                        <td class="text-light"><?= htmlspecialchars($m['cim'] ?: '-') ?></td>
-                                        <td class="text-light"><?= htmlspecialchars($m['grau']) ?></td>
-                                        <td class="text-light">
+        <div class="table-responsive">
+            <?php if ($tipoRelatorio === 'obreiros'): ?>
+                <table class="table table-dark-custom">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CIM</th>
+                            <th>Grau</th>
+                            <th>Cargo</th>
+                            <th>Status</th>
+                            <th>Contato</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($dados) > 0): ?>
+                            <?php foreach ($dados as $m): ?>
+                                <tr>
+                                    <td class="fw-bold text-white"><?= htmlspecialchars($m['nome']) ?></td>
+                                    <td class="text-light"><?= htmlspecialchars($m['cim'] ?: '-') ?></td>
+                                    <td class="text-light"><?= htmlspecialchars($m['grau']) ?></td>
+                                    <td class="text-light">
                                     <?php if ($m['cargo'] === 'veneravel'): ?>
                                         <span>Venerável Mestre</span>
                                     <?php elseif ($m['cargo'] === 'vigilante_1'): ?>
@@ -220,133 +215,133 @@ try {
                                     <?php else: ?>
                                         <span><?= '-' ?></span>
                                     <?php endif; ?>
-                                        </td>
-                                        <td class="text-light"><?= htmlspecialchars($m['status']) ?></td>
-                                        <td class="text-light">
-                                            <?= htmlspecialchars($m['telefone'] ?: '') ?> 
-                                            <?= !empty($m['email']) ? ' / ' . htmlspecialchars($m['email']) : '' ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <tr>
-                                    <td colspan="6" class="text-center py-4 text-light">Nenhum registro encontrado.</td>
+                                    </td>
+                                    <td class="text-light"><?= htmlspecialchars($m['status']) ?></td>
+                                    <td class="text-light">
+                                        <?= htmlspecialchars($m['telefone'] ?: '') ?> 
+                                        <?= !empty($m['email']) ? ' / ' . htmlspecialchars($m['email']) : '' ?>
+                                    </td>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-
-                <?php elseif ($tipoRelatorio === 'sessoes'): ?>
-                    <table class="table table-dark-custom">
-                        <thead>
+                            <?php endforeach; ?>
+                        <?php else: ?>
                             <tr>
-                                <th>Data</th>
-                                <th>Título da Sessão</th>
-                                <th>Tipo</th>
-                                <th>Grau</th>
-                                <th>Tronco</th>
-                                <th class="text-center">Obreiros</th>
-                                <th class="text-center">Visitantes</th>
+                                <td colspan="6" class="text-center py-4 text-light">Nenhum registro encontrado.</td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($dados) > 0): ?>
-                                <?php foreach ($dados as $s): ?>
-                                    <tr>
-                                        <td class="text-light"><?= date('d/m/Y', strtotime($s['data_sessao'])) ?></td>
-                                        <td class="fw-bold text-white"><?= htmlspecialchars($s['titulo']) ?></td>
-                                        <td><span class="badge bg-secondary"><?= htmlspecialchars($s['tipo']) ?></span></td>
-                                        <td class="text-light">Grau <?= htmlspecialchars($s['grau']) ?></td>
-                                        <td class="fw-bold; text-white">R$ <?php echo number_format($s['valor'] ?? 0, 2, ',', '.'); ?></td>
-                                        <td class="text-center fw-bold text-warning"><?= $s['presentes'] ?> Obreiros</td>
-                                        <td class="text-center fw-bold text-warning"><?= $s['visitantes'] ?> Visitantes</td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+
+            <?php elseif ($tipoRelatorio === 'sessoes'): ?>
+                <table class="table table-dark-custom">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Título da Sessão</th>
+                            <th>Tipo</th>
+                            <th>Grau</th>
+                            <th>Tronco</th>
+                            <th class="text-center">Obreiros</th>
+                            <th class="text-center">Visitantes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($dados) > 0): ?>
+                            <?php foreach ($dados as $s): ?>
                                 <tr>
-                                    <td colspan="7" class="text-center py-4 text-light">Nenhuma sessão registrada no ano de <?= $anoSelecionado ?>.</td>
+                                    <td class="text-light"><?= date('d/m/Y', strtotime($s['data_sessao'])) ?></td>
+                                    <td class="fw-bold text-white"><?= htmlspecialchars($s['titulo']) ?></td>
+                                    <td><span class="badge bg-secondary"><?= htmlspecialchars($s['tipo']) ?></span></td>
+                                    <td class="text-light">Grau <?= htmlspecialchars($s['grau']) ?></td>
+                                    <td class="fw-bold; text-white">R$ <?php echo number_format($s['valor'] ?? 0, 2, ',', '.'); ?></td>
+                                    <td class="text-center fw-bold text-warning"><?= $s['presentes'] ?> Obreiros</td>
+                                    <td class="text-center fw-bold text-warning"><?= $s['visitantes'] ?> Visitantes</td>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-
-                <?php elseif ($tipoRelatorio === 'frequencia'): ?>
-                    <table class="table table-dark-custom">
-                        <thead>
+                            <?php endforeach; ?>
+                        <?php else: ?>
                             <tr>
-                                <th>Obreiro / CIM</th>
-                                <th class="text-center">Total Sessões</th>
-                                <th class="text-center">Presenças</th>
-                                <th class="text-center">Faltas</th>
-                                <th class="text-center">Justificativas</th>
-                                <th class="text-center">% de Frequência</th>
-                                <th class="text-center">% de Faltas</th>
+                                <td colspan="7" class="text-center py-4 text-light">Nenhuma sessão registrada no ano de <?= $anoSelecionado ?>.</td>
                             </tr>
-                        </thead>
-                        <tbody>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+
+            <?php elseif ($tipoRelatorio === 'frequencia'): ?>
+                <table class="table table-dark-custom">
+                    <thead>
+                        <tr>
+                            <th>Obreiro / CIM</th>
+                            <th class="text-center">Total Sessões</th>
+                            <th class="text-center">Presenças</th>
+                            <th class="text-center">Faltas</th>
+                            <th class="text-center">Justificativas</th>
+                            <th class="text-center">% de Frequência</th>
+                            <th class="text-center">% de Faltas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($dados) > 0): ?>
                             <?php foreach ($dados as $f): ?>
-                               <?php    
+                                <?php    
                                     $presencas = (int)$f['total_presencas'] ?? 0;
                                     $justificativas = (int)$f['total_justificativas'] ?? 0;
-            
-                                    // Total de sessões nas quais o obreiro tinha a obrigação de participar (excluindo as justificadas)
+                                    
+                                    // Desconta as justificativas do total de sessões para gerar as sessões elegíveis
                                     $sessoesElegiveis = $totalSessoesGeral - $justificativas;
-            
-                                    // Faltas reais (tudo o que não foi presença e nem foi justificado)
+                                    
+                                    // Faltas reais
                                     $faltas = max(0, $totalSessoesGeral - $presencas - $justificativas);
-            
-                                    // Percentuais calculados com base nas sessões elegíveis (removendo as justificativas do cálculo)
+                                    
+                                    // Percentuais calculados com base nas sessões elegíveis
                                     $percFreq = $sessoesElegiveis > 0 ? ($presencas / $sessoesElegiveis) * 100 : 0;
                                     $percFaltas = $sessoesElegiveis > 0 ? ($faltas / $sessoesElegiveis) * 100 : 0;
-                                    ?>
-                                    <!-- Linha da tabela... -->
-                                    <tr>
-                                        <td>
-                                            <div class="fw-bold text-white"><?= htmlspecialchars($f['nome']) ?></div>
-                                            <small class="text-light opacity-75">CIM: <?= htmlspecialchars($f['cim'] ?: '-') ?></small>
-                                        </td>
-                                        <td class="text-center text-light"><?= $totalSessoesGeral ?></td>
-                                        <td class="text-center text-success fw-bold"><?= $presencas ?></td>
-                                        <td class="text-center text-danger fw-bold"><?= $faltas ?></td>
-                                        <td class="text-center text-danger fw-bold"><?= $justificativas ?></td>
-                                        <td class="text-center">
-                                            <span class="badge bg-<?= $percFreq >= 75 ? 'success' : ($percFreq >= 50 ? 'warning text-dark' : 'danger') ?>">
-                                                <?= number_format($percFreq, 1, ',', '.') ?>%
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="badge bg-<?= $percFaltas > 50 ? 'danger' : ($percFreq <= 50 ? 'warning text-dark' : 'secondary') ?>">
-                                                <?= number_format($percFaltas, 1, ',', '.') ?>%
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+                                ?>
                                 <tr>
-                                    <td colspan="6" class="text-center py-4 text-light">Nenhuma presença resgistrada foi encontrada no ano de <?= $anoSelecionado ?>.</td>
+                                    <td>
+                                        <div class="fw-bold text-white"><?= htmlspecialchars($f['nome']) ?></div>
+                                        <small class="text-light opacity-75">CIM: <?= htmlspecialchars($f['cim'] ?: '-') ?></small>
+                                    </td>
+                                    <td class="text-center text-light"><?= $totalSessoesGeral ?></td>
+                                    <td class="text-center text-success fw-bold"><?= $presencas ?></td>
+                                    <td class="text-center text-danger fw-bold"><?= $faltas ?></td>
+                                    <td class="text-center text-warning fw-bold"><?= $justificativas ?></td>
+                                    <td class="text-center">
+                                        <span class="badge bg-<?= $percFreq >= 75 ? 'success' : ($percFreq >= 50 ? 'warning text-dark' : 'danger') ?>">
+                                            <?= number_format($percFreq, 1, ',', '.') ?>%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-<?= $percFaltas > 50 ? 'danger' : ($percFreq <= 50 ? 'warning text-dark' : 'secondary') ?>">
+                                            <?= number_format($percFaltas, 1, ',', '.') ?>%
+                                        </span>
+                                    </td>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                <?php endif; ?>
-            </div>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-light">Nenhuma presença registrada foi encontrada no ano de <?= $anoSelecionado ?>.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
         </div>
-    </main>
+    </div>
+</main>
+
+<script>
+function toggleMobileMenu() {
+    const sidebar = document.querySelector('.sidebar'); 
+    const backdrop = document.getElementById('sidebarBackdrop');
     
-    <script>
-    function toggleMobileMenu() {
-        const sidebar = document.querySelector('.sidebar'); 
-        const backdrop = document.getElementById('sidebarBackdrop');
-        
-        if (sidebar) {
-            sidebar.classList.toggle('show');
-        }
-        if (backdrop) {
-            backdrop.classList.toggle('show');
-        }
+    if (sidebar) {
+        sidebar.classList.toggle('show');
     }
+    if (backdrop) {
+        backdrop.classList.toggle('show');
+    }
+}
 </script>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
