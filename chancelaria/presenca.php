@@ -218,7 +218,7 @@ try {
                                         <?php if ($p['status_presenca'] == 'J' || $p['status_presenca'] == 'Justificado'): ?>
                                              <span class="badge bg-warning">Justificado</span>
                                         <?php else: ?>
-                                             <span class="badge bg-success">Outro Status</span>
+                                             <span class="badge bg-success">Presente</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center no-print">
