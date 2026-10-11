@@ -215,7 +215,7 @@ try {
                                     <td><span>Loja Fraternidade Carpinense N° 4028</span></td>
                                     <td><span class="badge bg-secondary">Grau <?= htmlspecialchars($p['grau']) ?></span></td>
                                     <td class="text-center">
-                                        <span class="badge bg-success">Presente</span>
+                                        <span class="badge bg-success"><?= ($p['status_presenca'] == 'J' ? 'Justificado' : 'Presente') ?></span>
                                     </td>
                                     <td class="text-center no-print">
                                         <button class="btn btn-outline-danger btn-sm" onclick="removerPresenca(<?= $p['membro_id'] ?>)" title="Remover Presença" <?= ($_SESSION['is_admin'] == 0) ? 'disabled' : '' ?>>
