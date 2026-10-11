@@ -213,7 +213,7 @@ try {
                                     <td><?= htmlspecialchars($p['cim'] ?: '-') ?></td>
                                     <td class="fw-bold"><?= htmlspecialchars($p['nome']) ?></td>
                                     <td><span>Loja Fraternidade Carpinense N° 4028</span></td>
-                                    <td><span class="badge bg-secondary">Grau <?= htmlspecialchars($p['grau']) ?></span></td>
+                                    <td><span class="badge bg-secondary"><?= htmlspecialchars($p['grau']) ?></span></td>
                                     <td class="text-center">
                                         <?php if ($p['status_presenca'] == 'J' || $p['status_presenca'] == 'Justificado'): ?>
                                              <span class="badge bg-warning">Justificado</span>
