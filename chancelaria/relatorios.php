@@ -270,6 +270,7 @@ try {
                                 <th class="text-center">Total Sessões</th>
                                 <th class="text-center">Presenças</th>
                                 <th class="text-center">Faltas</th>
+                                <th class="text-center">Justificativas</th>
                                 <th class="text-center">% de Frequência</th>
                                 <th class="text-center">% de Faltas</th>
                             </tr>
@@ -295,6 +296,7 @@ try {
                                         <td class="text-center text-light"><?= $totalSessoesGeral ?></td>
                                         <td class="text-center text-success fw-bold"><?= $presencas ?></td>
                                         <td class="text-center text-danger fw-bold"><?= $faltas ?></td>
+                                        <td class="text-center text-danger fw-bold"><?= $justificativas ?></td>
                                         <td class="text-center">
                                             <span class="badge bg-<?= $percFreq >= 75 ? 'success' : ($percFreq >= 50 ? 'warning text-dark' : 'danger') ?>">
                                                 <?= number_format($percFreq, 1, ',', '.') ?>%
