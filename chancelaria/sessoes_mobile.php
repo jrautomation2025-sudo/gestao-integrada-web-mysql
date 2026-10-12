@@ -67,11 +67,11 @@ $presencas_membros = [];
 $presencas_visitantes = [];
 
 if (isset($_GET['sessao_id'])) {
-    $sessao_id = $_GET['sessao_id'];
+    $sessao_id = filter_input(INPUT_GET, 'sessao_id', FILTER_VALIDATE_INT);
     
     // Pega dados da sessão escolhida
-    $stmtS = $pdo_read->prepare("SELECT * FROM chancelaria_sessoes WHERE id = ?");
-    $stmtS->execute([$sessao_id]);
+    $stmtS = $pdo_read->prepare("SELECT * FROM chancelaria_sessoes WHERE id = ? AND tenant_id = ?");
+    $stmtS->execute([$sessao_id, $tenant_id_logado]);
     $sessao_ativa = $stmtS->fetch();
 
     if ($sessao_ativa) {
@@ -79,20 +79,21 @@ if (isset($_GET['sessao_id'])) {
         $stmtM = $pdo_read->prepare("
             SELECT m.nome, m.cim, m.grau, p.created_at 
             FROM chancelaria_presencas p 
-            JOIN chancelaria_membros m ON p.membro_id = m.id 
-            WHERE p.sessao_id = ?
+            JOIN chancelaria_membros m ON p.membro_id = m.id AND m.tenant_id = p.tenant_id
+            WHERE p.sessao_id = ? AND p.tenant_id = ?
             AND p.status_presenca = 'P'
+            AND (p.justificativa IS NULL OR TRIM(p.justificativa) = '')
         ");
-        $stmtM->execute([$sessao_id]);
+        $stmtM->execute([$sessao_id, $tenant_id_logado]);
         $presencas_membros = $stmtM->fetchAll(PDO::FETCH_ASSOC);
 
         // Visitantes presentes
         $stmtV = $pdo_read->prepare("
             SELECT nome, cim, loja_origem, potencia, grau, telefone, email, created_at 
             FROM chancelaria_visitantes 
-            WHERE sessao_id = ?
+            WHERE sessao_id = ? AND tenant_id = ?
         ");
-        $stmtV->execute([$sessao_id]);
+        $stmtV->execute([$sessao_id, $tenant_id_logado]);
         $presencas_visitantes = $stmtV->fetchAll(PDO::FETCH_ASSOC);
     }
 }
