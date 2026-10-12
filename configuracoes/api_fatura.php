@@ -51,7 +51,7 @@ if (!empty($dados->nome_cliente) && !empty($dados->valor) && !empty($dados->usua
     require 'config.php';
 
     // Busca as configurações ESPECÍFICAS do usuário dono da fatura
-    $stmt = $pdo->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :tenant_id");
+    $stmt = $pdo_read->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :tenant_id");
     $stmt->execute([':tenant_id' => $usuario_id]);
     $config = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -66,7 +66,7 @@ if (!empty($dados->nome_cliente) && !empty($dados->valor) && !empty($dados->usua
     // =================================================================
     // BUSCA OS DADOS DA LOJA (PARA O PAPEL TIMBRADO)
     // =================================================================
-    $stmtLodge = $pdo->prepare("
+    $stmtLodge = $pdo_read->prepare("
         SELECT l.nome, l.url_logo, l.endereco
         FROM secretaria_lojas l
         JOIN usuarios u ON u.loja_id = l.id
