@@ -37,7 +37,7 @@ $user_id = $_SESSION['user_id'] ?? $_SESSION['user']['id'];
 $contexto = $_SESSION['contexto_atual'] ?? 'pessoal';
 
 $sqlUsuario = "SELECT nome FROM usuarios WHERE id = ?";
-$stmtUsuario = $pdo->prepare($sqlUsuario);
+$stmtUsuario = $pdo_read->prepare($sqlUsuario);
 $stmtUsuario->execute([$user_id]);
 $nomeUsuarioLogado = $stmtUsuario->fetchColumn() ?: 'Administrador'; 
 
@@ -55,7 +55,7 @@ try {
     $sqlAnterior = "SELECT SUM(CASE WHEN tipo = 'saldo' THEN valor ELSE -valor END) as saldo_anterior 
                     FROM transacoes 
                     WHERE usuario_id = ? AND contexto = ? AND data_transacao < ?";
-    $stmtAnterior = $pdo->prepare($sqlAnterior);
+    $stmtAnterior = $pdo_read->prepare($sqlAnterior);
     $stmtAnterior->execute([$user_id, $contexto, $dataLimiteSaldoAnterior]);
     $saldoAnterior = $stmtAnterior->fetchColumn() ?: 0;
 
@@ -63,7 +63,7 @@ try {
                     FROM transacoes 
                     WHERE usuario_id = ? AND contexto = ? AND YEAR(data_transacao) = ?" . $filtroMesSql . " 
                     ORDER BY data_transacao ASC";
-    $stmtDetalhes = $pdo->prepare($sqlDetalhes);
+    $stmtDetalhes = $pdo_read->prepare($sqlDetalhes);
     $stmtDetalhes->execute($paramsSQL);
     $lancamentos_detalhados = $stmtDetalhes->fetchAll(PDO::FETCH_ASSOC);
     
@@ -71,7 +71,7 @@ try {
                     FROM investimentos 
                     WHERE usuario_id = ? AND contexto = ?
                     ORDER BY data_aporte ASC";
-    $stmtInvestimentos = $pdo->prepare($sqlInvestimentos);
+    $stmtInvestimentos = $pdo_read->prepare($sqlInvestimentos);
     $stmtInvestimentos->execute([$user_id, $contexto]);
     $lancamentos_investimentos = $stmtInvestimentos->fetchAll(PDO::FETCH_ASSOC);
 
@@ -305,7 +305,7 @@ try {
     </div>";
 
     $sqlMembros = "SELECT nome, email FROM clientes WHERE email IS NOT NULL AND email != '' AND situacao = 'Ativo' AND usuario_id = ?";
-    $stmtMembros = $pdo->prepare($sqlMembros);
+    $stmtMembros = $pdo_read->prepare($sqlMembros);
     $stmtMembros->execute([$user_id]); 
     $membros = $stmtMembros->fetchAll(PDO::FETCH_ASSOC);
 

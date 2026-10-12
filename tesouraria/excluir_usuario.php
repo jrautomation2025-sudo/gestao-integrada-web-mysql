@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['id_usuario'])) {
     // 3. Executa o DELETE com a trava de segurança do Tenant (dono_id)
     try {
         // A cláusula dono_id = :tenant é crucial no seu SaaS para isolar os dados
-        $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = :id AND dono_id = :tenant");
+        $stmt = $pdo_write->prepare("DELETE FROM usuarios WHERE id = :id AND dono_id = :tenant");
         $stmt->execute([
             ':id' => $id_usuario,
             ':tenant' => $tenant_id

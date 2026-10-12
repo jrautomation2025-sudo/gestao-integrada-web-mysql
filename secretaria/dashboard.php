@@ -12,7 +12,7 @@ if (!isset($_SESSION['tenant_id']) && !isset($_SESSION['user_id'])) {
 
 $tenant_id = $_SESSION['tenant_id'] ?? $_SESSION['user_id'] ?? $_SESSION['user']['id'];
 
-$stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+$stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
 $stmt->execute([$tenant_id]);
 $meuPerfil = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -25,22 +25,22 @@ $ultimos_registros = [];
 // Exemplo de consultas para os indicadores do Dashboard
 try {
     // Total de Obreiros ativos
-    $stmtObreiros = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo'");
+    $stmtObreiros = $pdo_read->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo'");
     $stmtObreiros->execute([$tenant_id]);
     $total_obreiros = $stmtObreiros->fetchColumn() ?: 0;
 
     // Total de Balaustres / Atas registrados
-    $stmtBalaustres = $pdo->prepare("SELECT COUNT(*) FROM secretaria_balaustres WHERE tenant_id = ?");
+    $stmtBalaustres = $pdo_read->prepare("SELECT COUNT(*) FROM secretaria_balaustres WHERE tenant_id = ?");
     $stmtBalaustres->execute([$tenant_id]);
     $total_balaustres = $stmtBalaustres->fetchColumn() ?: 0;
 
     // Total de Expedientes
-    $stmtExpedientes = $pdo->prepare("SELECT COUNT(*) FROM secretaria_expedientes WHERE tenant_id = ?");
+    $stmtExpedientes = $pdo_read->prepare("SELECT COUNT(*) FROM secretaria_expedientes WHERE tenant_id = ?");
     $stmtExpedientes->execute([$tenant_id]);
     $total_expedientes = $stmtExpedientes->fetchColumn() ?: 0;
     
     // Total de Correspondências
-    $stmtCorresp = $pdo->prepare("SELECT COUNT(*) FROM secretaria_correspondencias WHERE tenant_id = ?");
+    $stmtCorresp = $pdo_read->prepare("SELECT COUNT(*) FROM secretaria_correspondencias WHERE tenant_id = ?");
     $stmtCorresp->execute([$tenant_id]);
     $total_correspondencias = $stmtCorresp->fetchColumn() ?: 0;
 
@@ -50,17 +50,17 @@ try {
     $ano_atual = date('Y');
     
     // Gráfico: Balaustres
-    $stmtGB = $pdo->prepare("SELECT MONTH(data_balaustre) as mes, COUNT(*) as total FROM secretaria_balaustres WHERE tenant_id = ? AND YEAR(data_balaustre) = ? GROUP BY MONTH(data_balaustre)");
+    $stmtGB = $pdo_read->prepare("SELECT MONTH(data_balaustre) as mes, COUNT(*) as total FROM secretaria_balaustres WHERE tenant_id = ? AND YEAR(data_balaustre) = ? GROUP BY MONTH(data_balaustre)");
     $stmtGB->execute([$tenant_id, $ano_atual]);
     while ($row = $stmtGB->fetch(PDO::FETCH_ASSOC)) { $dados_balaustres[$row['mes']] = $row['total']; }
 
     // Gráfico: Expedientes
-    $stmtGE = $pdo->prepare("SELECT MONTH(data_expediente) as mes, COUNT(*) as total FROM secretaria_expedientes WHERE tenant_id = ? AND YEAR(data_expediente) = ? GROUP BY MONTH(data_expediente)");
+    $stmtGE = $pdo_read->prepare("SELECT MONTH(data_expediente) as mes, COUNT(*) as total FROM secretaria_expedientes WHERE tenant_id = ? AND YEAR(data_expediente) = ? GROUP BY MONTH(data_expediente)");
     $stmtGE->execute([$tenant_id, $ano_atual]);
     while ($row = $stmtGE->fetch(PDO::FETCH_ASSOC)) { $dados_expedientes[$row['mes']] = $row['total']; }
 
     // Gráfico: Correspondências
-    $stmtGC = $pdo->prepare("SELECT MONTH(data_recebimento) as mes, COUNT(*) as total FROM secretaria_correspondencias WHERE tenant_id = ? AND YEAR(data_recebimento) = ? GROUP BY MONTH(data_recebimento)");
+    $stmtGC = $pdo_read->prepare("SELECT MONTH(data_recebimento) as mes, COUNT(*) as total FROM secretaria_correspondencias WHERE tenant_id = ? AND YEAR(data_recebimento) = ? GROUP BY MONTH(data_recebimento)");
     $stmtGC->execute([$tenant_id, $ano_atual]);
     while ($row = $stmtGC->fetch(PDO::FETCH_ASSOC)) { $dados_corresp[$row['mes']] = $row['total']; }
 
@@ -75,7 +75,7 @@ try {
         (SELECT id, titulo, data_recebimento AS data_registro, 'Correspondência' AS tipo FROM secretaria_correspondencias WHERE tenant_id = :t3)
         ORDER BY data_registro DESC LIMIT 6
     ";
-    $stmtUltimos = $pdo->prepare($sql_ultimos);
+    $stmtUltimos = $pdo_read->prepare($sql_ultimos);
     $stmtUltimos->execute([':t1' => $tenant_id, ':t2' => $tenant_id, ':t3' => $tenant_id]);
     $ultimos_registros = $stmtUltimos->fetchAll(PDO::FETCH_ASSOC);
 

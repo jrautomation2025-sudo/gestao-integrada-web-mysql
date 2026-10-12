@@ -13,14 +13,14 @@ $sessao_id = isset($_GET['sessao_id']) ? (int)$_GET['sessao_id'] : 0;
 
 try {
     // Busca todas as sessões da Loja para o Select
-    $stmtSessoes = $pdo->prepare("SELECT id, data_sessao, tipo, grau FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY data_sessao DESC");
+    $stmtSessoes = $pdo_read->prepare("SELECT id, data_sessao, tipo, grau FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY data_sessao DESC");
     $stmtSessoes->execute([$tenant_id]);
     $sessoes = $stmtSessoes->fetchAll(PDO::FETCH_ASSOC);
 
     // Se uma sessão foi escolhida, busca os visitantes dela
     $visitantes = [];
     if ($sessao_id > 0) {
-        $stmtVis = $pdo->prepare("SELECT * FROM chancelaria_visitantes WHERE tenant_id = ? AND sessao_id = ? ORDER BY nome ASC");
+        $stmtVis = $pdo_read->prepare("SELECT * FROM chancelaria_visitantes WHERE tenant_id = ? AND sessao_id = ? ORDER BY nome ASC");
         $stmtVis->execute([$tenant_id, $sessao_id]);
         $visitantes = $stmtVis->fetchAll(PDO::FETCH_ASSOC);
     }

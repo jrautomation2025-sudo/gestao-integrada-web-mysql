@@ -26,7 +26,7 @@ try {
     if ($acao === 'excluir') {
         if ($id <= 0) throw new Exception("ID inválido.");
         
-        $stmt = $pdo->prepare("DELETE FROM chancelaria_membros WHERE id = ? AND tenant_id = ?");
+        $stmt = $pdo_write->prepare("DELETE FROM chancelaria_membros WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$id, $tenant_id]);
         
         echo json_encode(['sucesso' => true]);
@@ -56,7 +56,7 @@ try {
     if ($acao === 'criar') {
         $sql = "INSERT INTO chancelaria_membros (tenant_id, nome, cim, grau, cargo, status, presenca, telefone, email, data_nascimento, data_iniciacao) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         $stmt->execute([$tenant_id, $nome, $cim, $grau, $cargo, $status, $presenca, $telefone, $email, $data_nascimento, $data_iniciacao]);
         
         echo json_encode(['sucesso' => true]);
@@ -68,7 +68,7 @@ try {
         $sql = "UPDATE chancelaria_membros 
                 SET nome = ?, cim = ?, grau = ?, cargo = ?, status = ?, presenca = ?, telefone = ?, email = ?, data_nascimento = ?, data_iniciacao = ? 
                 WHERE id = ? AND tenant_id = ?";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         $stmt->execute([$nome, $cim, $grau, $cargo, $status, $presenca, $telefone, $email, $data_nascimento, $data_iniciacao, $id, $tenant_id]);
 
         echo json_encode(['sucesso' => true]);

@@ -27,7 +27,7 @@ try {
     if ($acao === 'excluir') {
         if ($id <= 0) throw new Exception("ID inválido.");
         
-        $stmt = $pdo->prepare("DELETE FROM chancelaria_visitantes WHERE id = ? AND tenant_id = ?");
+        $stmt = $pdo_write->prepare("DELETE FROM chancelaria_visitantes WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$id, $tenant_id]);
         
         echo json_encode(['sucesso' => true]);
@@ -52,7 +52,7 @@ try {
     }
 
     // Validação de Segurança: Verifica se a sessão realmente pertence à Loja atual
-    $stmtCheck = $pdo->prepare("SELECT id FROM chancelaria_sessoes WHERE id = ? AND tenant_id = ?");
+    $stmtCheck = $pdo_read->prepare("SELECT id FROM chancelaria_sessoes WHERE id = ? AND tenant_id = ?");
     $stmtCheck->execute([$sessao_id, $tenant_id]);
     if ($stmtCheck->rowCount() === 0) {
          echo json_encode(['sucesso' => false, 'mensagem' => 'Sessão inválida ou não pertence à sua Loja.']);
@@ -64,7 +64,7 @@ try {
         $sql = "INSERT INTO chancelaria_visitantes 
                 (tenant_id, sessao_id, nome, cim, grau, loja_origem, oriente, potencia, telefone, email) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         $stmt->execute([$tenant_id, $sessao_id, $nome, $cim, $grau, $loja_origem, $oriente, $potencia, $telefone, $email]);
         
         echo json_encode(['sucesso' => true]);
@@ -76,7 +76,7 @@ try {
         $sql = "UPDATE chancelaria_visitantes 
                 SET nome = ?, cim = ?, grau = ?, loja_origem = ?, oriente = ?, potencia = ?, telefone = ?, email = ? 
                 WHERE id = ? AND tenant_id = ?";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         $stmt->execute([$nome, $cim, $grau, $loja_origem, $oriente, $potencia, $telefone, $email, $id, $tenant_id]);
 
         echo json_encode(['sucesso' => true]);

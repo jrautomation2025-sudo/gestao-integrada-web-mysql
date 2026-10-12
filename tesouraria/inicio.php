@@ -40,37 +40,37 @@ $meses = [
 // =========================================================
 
 // saldos
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo IN ('saldo','tronco') AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
+$stmt = $pdo_read->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo IN ('saldo','tronco') AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
 $stmt->execute([$user_id, $contexto, $mes_filtro, $ano_filtro]);
 $total_saldos = $stmt->fetchColumn() ?: 0;
 
 // Receitas
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo = 'receita' AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
+$stmt = $pdo_read->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo = 'receita' AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
 $stmt->execute([$user_id, $contexto, $mes_filtro, $ano_filtro]);
 $total_receitas = $stmt->fetchColumn() ?: 0;
 
 // Despesas Totais
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo IN ('fixo', 'variavel','doação') AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
+$stmt = $pdo_read->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo IN ('fixo', 'variavel','doação') AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
 $stmt->execute([$user_id, $contexto, $mes_filtro, $ano_filtro]);
 $total_despesas = $stmt->fetchColumn() ?: 0;
 
 // Fixo
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo = 'fixo' AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
+$stmt = $pdo_read->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo = 'fixo' AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
 $stmt->execute([$user_id, $contexto, $mes_filtro, $ano_filtro]);
 $total_fixo = $stmt->fetchColumn() ?: 0;
 
 // Variável
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo IN ('variavel','doação') AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
+$stmt = $pdo_read->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo IN ('variavel','doação') AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
 $stmt->execute([$user_id, $contexto, $mes_filtro, $ano_filtro]);
 $total_variavel = $stmt->fetchColumn() ?: 0;
 
 // mensalidades
-$stmt = $pdo->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo = 'mensalidade' AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
+$stmt = $pdo_read->prepare("SELECT SUM(valor) FROM transacoes WHERE usuario_id = ? AND tipo = 'mensalidade' AND contexto = ? AND MONTH(data_transacao) = ? AND YEAR(data_transacao) = ?");
 $stmt->execute([$user_id, $contexto, $mes_filtro, $ano_filtro]);
 $total_mensalidades = $stmt->fetchColumn() ?: 0;
 
 // investimentos (mantido sem filtro de data, pois reflete o patrimônio atual)
-$stmt = $pdo->prepare("SELECT SUM(valor_atual) FROM investimentos WHERE usuario_id = ?");
+$stmt = $pdo_read->prepare("SELECT SUM(valor_atual) FROM investimentos WHERE usuario_id = ?");
 $stmt->execute([$user_id]);
 $total_investimentos = $stmt->fetchColumn() ?: 0;
 
@@ -85,7 +85,7 @@ $saldo = ($total + $total_investimentos) - $total_despesas;
 // =========================================================
 // 4. DADOS DO PERFIL E BADGE
 // =========================================================
-$stmt = $pdo->prepare("SELECT nome, telefone, plano, creditos_ia, plano_expiracao FROM usuarios WHERE id = ?");
+$stmt = $pdo_read->prepare("SELECT nome, telefone, plano, creditos_ia, plano_expiracao FROM usuarios WHERE id = ?");
 $stmt->execute([$user_id]);
 $meuPerfil = $stmt->fetch(PDO::FETCH_ASSOC);
 ?>

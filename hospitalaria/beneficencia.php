@@ -31,12 +31,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if (empty($id)) {
                 // Novo Registro
-                $stmt = $pdo->prepare("INSERT INTO hospitalaria_beneficencia (tenant_id, tipo, data_registro, valor, descricao, membro_id) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO hospitalaria_beneficencia (tenant_id, tipo, data_registro, valor, descricao, membro_id) VALUES (?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$user_id, $tipo, $data_registro, $valor, $descricao, $membro_id]);
                 $msg_sucesso = "Registro financeiro salvo com sucesso!";
             } else {
                 // Atualizar Registro Existente
-                $stmt = $pdo->prepare("UPDATE hospitalaria_beneficencia SET tipo=?, data_registro=?, valor=?, descricao=?, membro_id=? WHERE id=? AND tenant_id=?");
+                $stmt = $pdo_write->prepare("UPDATE hospitalaria_beneficencia SET tipo=?, data_registro=?, valor=?, descricao=?, membro_id=? WHERE id=? AND tenant_id=?");
                 $stmt->execute([$tipo, $data_registro, $valor, $descricao, $membro_id, $id, $user_id]);
                 $msg_sucesso = "Registro financeiro atualizado com sucesso!";
             }
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($acao === 'excluir') {
         $id_excluir = $_POST['id_excluir'] ?? '';
         try {
-            $stmt = $pdo->prepare("DELETE FROM hospitalaria_beneficencia WHERE id = ? AND tenant_id = ?");
+            $stmt = $pdo_write->prepare("DELETE FROM hospitalaria_beneficencia WHERE id = ? AND tenant_id = ?");
             $stmt->execute([$id_excluir, $user_id]);
             $msg_sucesso = "Registro excluído com sucesso!";
         } catch (PDOException $e) {
@@ -58,11 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // =========================================================================
 // BUSCA OS REGISTROS E CALCULA SALDOS
 // =========================================================================
-$stmt = $pdo->prepare("SELECT b.*, c.nome as nome_membro FROM hospitalaria_beneficencia b LEFT JOIN clientes c ON b.membro_id = c.id WHERE b.tenant_id = ? ORDER BY b.data_registro DESC, b.id DESC");
+$stmt = $pdo_read->prepare("SELECT b.*, c.nome as nome_membro FROM hospitalaria_beneficencia b LEFT JOIN clientes c ON b.membro_id = c.id WHERE b.tenant_id = ? ORDER BY b.data_registro DESC, b.id DESC");
 $stmt->execute([$user_id]);
 $movimentacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmtMembros = $pdo->prepare("SELECT id, nome FROM clientes WHERE usuario_id = ? ORDER BY nome ASC");
+$stmtMembros = $pdo_read->prepare("SELECT id, nome FROM clientes WHERE usuario_id = ? ORDER BY nome ASC");
 $stmtMembros->execute([$user_id]);
 $membros = $stmtMembros->fetchAll(PDO::FETCH_ASSOC);
 

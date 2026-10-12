@@ -21,11 +21,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
     if (!empty($nome)) {
         if ($cliente_id) {
-            $stmt = $pdo->prepare("UPDATE clientes SET nome=?, telefone=?, email=? WHERE id=? AND usuario_id=?");
+            $stmt = $pdo_write->prepare("UPDATE clientes SET nome=?, telefone=?, email=? WHERE id=? AND usuario_id=?");
             $stmt->execute([$nome, $telefone, $email, $cliente_id, $user_id]);
         } else {
             // INSERE COM O CONTEXTO
-            $stmt = $pdo->prepare("INSERT INTO clientes (usuario_id, nome, telefone, email, contexto) VALUES (?, ?, ?, ?, ?)");
+            $stmt = $pdo_write->prepare("INSERT INTO clientes (usuario_id, nome, telefone, email, contexto) VALUES (?, ?, ?, ?, ?)");
             $stmt->execute([$user_id, $nome, $telefone, $email, $ctx_salvar]);
         }
     }
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
 // DELETE
 if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM clientes WHERE id=? AND usuario_id=?");
+    $stmt = $pdo_write->prepare("DELETE FROM clientes WHERE id=? AND usuario_id=?");
     $stmt->execute([$_GET['delete'], $user_id]);
     header("Location: membros"); exit;
 }
@@ -51,7 +51,7 @@ if ($busca) {
 }
 
 $sql .= " ORDER BY nome ASC";
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 $stmt->execute($params);
 $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>

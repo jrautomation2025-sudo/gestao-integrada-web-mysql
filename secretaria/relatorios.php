@@ -27,26 +27,26 @@ $titulo_impresso = "";
 try {
     if ($tipo_relatorio === 'balaustres') {
         $titulo_impresso = "Relatório de Balaustres e Atas - $nome_mes / $filtro_ano";
-        $stmt = $pdo->prepare("SELECT * FROM secretaria_balaustres WHERE tenant_id = ? AND MONTH(data_balaustre) = ? AND YEAR(data_balaustre) = ? ORDER BY data_balaustre ASC");
+        $stmt = $pdo_read->prepare("SELECT * FROM secretaria_balaustres WHERE tenant_id = ? AND MONTH(data_balaustre) = ? AND YEAR(data_balaustre) = ? ORDER BY data_balaustre ASC");
         $stmt->execute([$tenant_id, $filtro_mes, $filtro_ano]);
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
     } elseif ($tipo_relatorio === 'expedientes') {
         $titulo_impresso = "Relatório de Expedientes - $nome_mes / $filtro_ano";
-        $stmt = $pdo->prepare("SELECT * FROM secretaria_expedientes WHERE tenant_id = ? AND MONTH(data_expediente) = ? AND YEAR(data_expediente) = ? ORDER BY data_expediente ASC");
+        $stmt = $pdo_read->prepare("SELECT * FROM secretaria_expedientes WHERE tenant_id = ? AND MONTH(data_expediente) = ? AND YEAR(data_expediente) = ? ORDER BY data_expediente ASC");
         $stmt->execute([$tenant_id, $filtro_mes, $filtro_ano]);
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
     } elseif ($tipo_relatorio === 'correspondencias') {
         $titulo_impresso = "Relatório de Correspondências - $nome_mes / $filtro_ano";
-        $stmt = $pdo->prepare("SELECT * FROM secretaria_correspondencias WHERE tenant_id = ? AND MONTH(data_recebimento) = ? AND YEAR(data_recebimento) = ? ORDER BY data_recebimento ASC");
+        $stmt = $pdo_read->prepare("SELECT * FROM secretaria_correspondencias WHERE tenant_id = ? AND MONTH(data_recebimento) = ? AND YEAR(data_recebimento) = ? ORDER BY data_recebimento ASC");
         $stmt->execute([$tenant_id, $filtro_mes, $filtro_ano]);
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
     } elseif ($tipo_relatorio === 'inventario') {
         // Inventário geralmente é geral, então ignoramos o mês/ano na query
         $titulo_impresso = "Relatório Geral de Inventário e Patrimônio";
-        $stmt = $pdo->prepare("SELECT * FROM secretaria_inventario WHERE tenant_id = ? ORDER BY categoria ASC, nome ASC");
+        $stmt = $pdo_read->prepare("SELECT * FROM secretaria_inventario WHERE tenant_id = ? ORDER BY categoria ASC, nome ASC");
         $stmt->execute([$tenant_id]);
         $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

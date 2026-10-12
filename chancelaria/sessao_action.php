@@ -24,12 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if (!empty($id)) {
                 // Atualizar
-                $stmt = $pdo->prepare("UPDATE chancelaria_sessoes SET titulo = ?, data_sessao = ?, hora_sessao = ?, tipo = ?, grau = ?, status = ?, token_presenca = ? WHERE id = ? AND tenant_id = ?");
+                $stmt = $pdo_write->prepare("UPDATE chancelaria_sessoes SET titulo = ?, data_sessao = ?, hora_sessao = ?, tipo = ?, grau = ?, status = ?, token_presenca = ? WHERE id = ? AND tenant_id = ?");
                 $stmt->execute([$titulo, $data_sessao, $hora_sessao, $tipo, $grau, $status, $id, $tenant_id, $token_presenca]);
                 $_SESSION['mensagem'] = "Sessão atualizada com sucesso!";
             } else {
                 // Inserir
-                $stmt = $pdo->prepare("INSERT INTO chancelaria_sessoes (tenant_id, titulo, data_sessao, hora_sessao, tipo, grau, status, token_presenca) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO chancelaria_sessoes (tenant_id, titulo, data_sessao, hora_sessao, tipo, grau, status, token_presenca) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$tenant_id, $titulo, $data_sessao, $hora_sessao, $tipo, $grau, $status, $token_presenca]);
                 $_SESSION['mensagem'] = "Sessão cadastrada com sucesso!";
             }

@@ -13,7 +13,7 @@ if (empty($token)) {
     die("<div style='background:#141724; color:#fff; padding:40px; text-align:center; font-family:Inter;'><h3>QR Code inválido ou expirado.</h3></div>");
 }
 
-$stmt = $pdo->prepare("SELECT * FROM chancelaria_sessoes WHERE token_presenca = ?");
+$stmt = $pdo_read->prepare("SELECT * FROM chancelaria_sessoes WHERE token_presenca = ?");
 $stmt->execute([$token]);
 $sessao = $stmt->fetch();
 
@@ -76,12 +76,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
 
     if ($acao === 'buscar_obreiro') {
         $cim = trim($_POST['cim'] ?? '');
-        $stmt = $pdo->prepare("SELECT id, nome, cim, grau FROM chancelaria_membros WHERE cim = ? AND tenant_id = ?");
+        $stmt = $pdo_read->prepare("SELECT id, nome, cim, grau FROM chancelaria_membros WHERE cim = ? AND tenant_id = ?");
         $stmt->execute([$cim, $tenant_id]);
         $obreiro = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($obreiro) {
-            $stmtCheck = $pdo->prepare("SELECT id FROM chancelaria_presencas WHERE sessao_id = ? AND membro_id = ?");
+            $stmtCheck = $pdo_read->prepare("SELECT id FROM chancelaria_presencas WHERE sessao_id = ? AND membro_id = ?");
             $stmtCheck->execute([$sessao_id, $obreiro['id']]);
             if ($stmtCheck->fetch()) {
                 echo json_encode(['status' => 'ja_registrado', 'mensagem' => 'Presença já foi registrada para este CIM nesta sessão!']);
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
 
     if ($acao === 'buscar_visitante') {
         $termo = trim($_POST['termo'] ?? '');
-        $stmt = $pdo->prepare("SELECT * FROM chancelaria_visitantes WHERE (cim = ? OR nome LIKE ?) AND tenant_id = ? LIMIT 1");
+        $stmt = $pdo_read->prepare("SELECT * FROM chancelaria_visitantes WHERE (cim = ? OR nome LIKE ?) AND tenant_id = ? LIMIT 1");
         $stmt->execute([$termo, "%$termo%", $tenant_id]);
         $visitante = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -129,12 +129,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
         if ($tipo === 'obreiro') {
             $obreiro_id = $_POST['obreiro_id'] ?? '';
             if (!empty($obreiro_id)) {
-                $stmtCheck = $pdo->prepare("SELECT id FROM chancelaria_presencas WHERE sessao_id = ? AND membro_id = ?");
+                $stmtCheck = $pdo_read->prepare("SELECT id FROM chancelaria_presencas WHERE sessao_id = ? AND membro_id = ?");
                 $stmtCheck->execute([$sessao_id, $obreiro_id]);
                 if ($stmtCheck->fetch()) {
                     $erro = "Presença já registrada para este obreiro!";
                 } else {
-                    $stmtIns = $pdo->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca) VALUES (?, ?, ?, ?)");
+                    $stmtIns = $pdo_write->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca) VALUES (?, ?, ?, ?)");
                     $stmtIns->execute([$tenant_id, $sessao_id, $obreiro_id, $presença]);
                     $msg = "Presença confirmada com sucesso!";
                     $sucesso_registro = true;
@@ -151,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
             $email = trim($_POST['email'] ?? '');
 
             // Insere o visitante vinculado à sessão atual
-            $stmtCad = $pdo->prepare("INSERT INTO chancelaria_visitantes (tenant_id, sessao_id, nome, cim, grau, loja_origem, oriente, potencia, telefone, email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmtCad = $pdo_write->prepare("INSERT INTO chancelaria_visitantes (tenant_id, sessao_id, nome, cim, grau, loja_origem, oriente, potencia, telefone, email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmtCad->execute([$tenant_id, $sessao_id, $nome, $cim_visitante, $cargo, $loja_origem, $oriente, $potencia, $telefone ?: null, $email ?: null]);
             
             $msg = "Visitante cadastrado e presença registrada com sucesso!";

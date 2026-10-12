@@ -49,8 +49,12 @@ Este projeto está estruturado para ser hospedado em uma VPS rodando **Easypanel
 Na aba **Environment** da sua aplicação web no Easypanel, configure as variáveis de conexão com o banco de dados. O arquivo `config.php` está programado para consumi-las automaticamente:
 
 ```env
-DB_HOST=nome_do_servico_mysql
+DB_HOST_WRITE=host_do_mysql_ativo
+DB_HOST_READ=host_do_mysql_replicado
 DB_NAME=seu_banco_de_dados
 DB_USER=usuario_do_banco
 DB_PASS=senha_do_banco
 DB_PORT=porta_do_banco
+```
+
+`DB_HOST_WRITE` aponta para o banco ativo, usado em gravações e transações, e `DB_HOST_READ` aponta para a réplica usada nas consultas. Se alguma dessas variáveis não for definida, a conexão correspondente usa `DB_HOST`; esse valor também permanece como fallback para manter configurações antigas funcionando.

@@ -16,7 +16,7 @@ $erro = $_SESSION['erro'] ?? '';
 unset($_SESSION['mensagem'], $_SESSION['erro']);
 
 // Busca os dados da Loja associada ao dono da conta (tenant_id) para o Papel Timbrado
-$stmtLodge = $pdo->prepare("
+$stmtLodge = $pdo_read->prepare("
     SELECT l.nome, l.url_logo, l.endereco, l.email, l.localizacao
     FROM secretaria_lojas l
     JOIN usuarios u ON u.loja_id = l.id
@@ -43,11 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo_corresp'])) {
     if (!empty($titulo) && !empty($data_rec)) {
         try {
             if (!empty($id)) {
-                $stmt = $pdo->prepare("UPDATE secretaria_correspondencias SET titulo = ?, data_recebimento = ?, remetente = ?, tipo = ?, status = ?, conteudo = ? WHERE id = ? AND tenant_id = ?");
+                $stmt = $pdo_write->prepare("UPDATE secretaria_correspondencias SET titulo = ?, data_recebimento = ?, remetente = ?, tipo = ?, status = ?, conteudo = ? WHERE id = ? AND tenant_id = ?");
                 $stmt->execute([$titulo, $data_rec, $remetente, $tipo, $status, $conteudo, $id, $tenant_id]);
                 $_SESSION['mensagem'] = "Correspondência atualizada!";
             } else {
-                $stmt = $pdo->prepare("INSERT INTO secretaria_correspondencias (tenant_id, titulo, data_recebimento, remetente, tipo, status, conteudo) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO secretaria_correspondencias (tenant_id, titulo, data_recebimento, remetente, tipo, status, conteudo) VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$tenant_id, $titulo, $data_rec, $remetente, $tipo, $status, $conteudo]);
                 $_SESSION['mensagem'] = "Correspondência registrada!";
             }
@@ -67,11 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_envio']) && $_PO
     $destinatario_email = trim($_POST['destinatario_email'] ?? '');
 
     // Busca a correspondência para garantir que pertence ao tenant
-    $stmtC = $pdo->prepare("SELECT * FROM secretaria_correspondencias WHERE id = ? AND tenant_id = ?");
+    $stmtC = $pdo_read->prepare("SELECT * FROM secretaria_correspondencias WHERE id = ? AND tenant_id = ?");
     $stmtC->execute([$corresp_id, $tenant_id]);
     $dados_corresp = $stmtC->fetch(PDO::FETCH_ASSOC);
     
-    $stmtC = $pdo->prepare("SELECT * FROM chancelaria_membros WHERE tenant_id = ? AND cargo in ('veneravel','orador','secretario')");
+    $stmtC = $pdo_read->prepare("SELECT * FROM chancelaria_membros WHERE tenant_id = ? AND cargo in ('veneravel','orador','secretario')");
     $stmtC->execute([$tenant_id]);
     $dados_membros = $stmtC->fetchAll(PDO::FETCH_ASSOC);
     
@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_envio']) && $_PO
 // 3. Exclusão
 if (isset($_GET['excluir'])) {
     try {
-        $stmt = $pdo->prepare("DELETE FROM secretaria_correspondencias WHERE id = ? AND tenant_id = ?");
+        $stmt = $pdo_write->prepare("DELETE FROM secretaria_correspondencias WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$_GET['excluir'], $tenant_id]);
         $_SESSION['mensagem'] = "Correspondência excluída!";
     } catch (PDOException $e) {
@@ -155,7 +155,7 @@ $filtro_ano = isset($_GET['ano']) && $_GET['ano'] !== '' ? $_GET['ano'] : date('
 
 $corresp = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM secretaria_correspondencias WHERE tenant_id = ? AND MONTH(data_recebimento) = ? AND YEAR(data_recebimento) = ? ORDER BY data_recebimento DESC");
+    $stmt = $pdo_read->prepare("SELECT * FROM secretaria_correspondencias WHERE tenant_id = ? AND MONTH(data_recebimento) = ? AND YEAR(data_recebimento) = ? ORDER BY data_recebimento DESC");
     $stmt->execute([$tenant_id, $filtro_mes, $filtro_ano]);
     $corresp = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {}

@@ -11,9 +11,9 @@ if (!isset($_SESSION['tenant_id'])) {
 $usuario_id = $_SESSION['tenant_id'];
 
 // Busca os dados APENAS do usuário logado
-//$stmt = $pdo->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :usuario_id");
+//$stmt = $pdo_read->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :usuario_id");
 //$stmt->execute([':usuario_id' => $usuario_id]);
-$stmt = $pdo->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :tenant_id");
+$stmt = $pdo_read->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :tenant_id");
 $stmt->execute([':tenant_id' => $_SESSION['tenant_id']]);
 $config = $stmt->fetch(PDO::FETCH_ASSOC);
 ?>

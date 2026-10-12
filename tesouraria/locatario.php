@@ -15,11 +15,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
     if (!empty($nome)) {
         if ($cliente_id) {
-            $stmt = $pdo->prepare("UPDATE tesouraria_alugueis_responsavel SET responsavel=?, telefone=?, email=? WHERE id=? AND tenant_id=?");
+            $stmt = $pdo_write->prepare("UPDATE tesouraria_alugueis_responsavel SET responsavel=?, telefone=?, email=? WHERE id=? AND tenant_id=?");
             $stmt->execute([$nome, $telefone, $email, $cliente_id, $user_id]);
         } else {
             // INSERE COM O CONTEXTO
-            $stmt = $pdo->prepare("INSERT INTO tesouraria_alugueis_responsavel (tenant_id, responsavel, telefone, email) VALUES (?, ?, ?, ?)");
+            $stmt = $pdo_write->prepare("INSERT INTO tesouraria_alugueis_responsavel (tenant_id, responsavel, telefone, email) VALUES (?, ?, ?, ?)");
             $stmt->execute([$user_id, $nome, $telefone, $email]);
         }
     }
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
 // DELETE
 if (isset($_GET['delete'])) {
-    $stmt = $pdo->prepare("DELETE FROM tesouraria_alugueis_responsavel WHERE id=? AND tenant_id=?");
+    $stmt = $pdo_write->prepare("DELETE FROM tesouraria_alugueis_responsavel WHERE id=? AND tenant_id=?");
     $stmt->execute([$_GET['delete'], $user_id]);
     header("Location: locatario"); exit;
 }
@@ -45,7 +45,7 @@ if ($busca) {
 }
 
 $sql .= " ORDER BY nome ASC";
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 $stmt->execute($params);
 $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>

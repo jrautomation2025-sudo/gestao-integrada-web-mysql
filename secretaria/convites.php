@@ -27,7 +27,7 @@ $data_hoje = $formatador->format(time());
 
 // Busca dados do perfil do usuário logado (opcional)
 try {
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+    $stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
     $stmt->execute([$tenant_id]);
     $meuPerfil = $stmt->fetch(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -39,7 +39,7 @@ try {
 // ==========================================
 $lojas = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM secretaria_lojas ORDER BY nome ASC");
+    $stmt = $pdo_read->prepare("SELECT * FROM secretaria_lojas ORDER BY nome ASC");
     $stmt->execute();
     $lojas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
@@ -53,7 +53,7 @@ $nomeVeneravel = 'Irmão Venerável'; // Valor padrão
 $nomeSecretario = 'Irmão Secretário'; // Valor padrão
 
 try {
-    $stmt = $pdo->prepare("SELECT nome, cargo FROM chancelaria_membros WHERE tenant_id = ? AND cargo IN ('veneravel','secretario')");
+    $stmt = $pdo_read->prepare("SELECT nome, cargo FROM chancelaria_membros WHERE tenant_id = ? AND cargo IN ('veneravel','secretario')");
     $stmt->execute([$tenant_id]);
     $membros = $stmt->fetchAll(PDO::FETCH_ASSOC);
     

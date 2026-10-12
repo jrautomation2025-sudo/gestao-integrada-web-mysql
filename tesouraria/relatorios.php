@@ -37,7 +37,7 @@ if ($mes_filtro === 'todos') {
 $sqlAnterior = "SELECT SUM(CASE WHEN tipo in ('receita','saldo','mensalidade','tronco') THEN valor ELSE -valor END) as saldo_anterior 
                 FROM transacoes 
                 WHERE usuario_id = ? AND contexto = ? AND data_transacao >= ?";
-$stmtAnterior = $pdo->prepare($sqlAnterior);
+$stmtAnterior = $pdo_read->prepare($sqlAnterior);
 $stmtAnterior->execute([$user_id, $contexto, $dataLimiteSaldoAnterior]);
 $saldoAnterior = $stmtAnterior->fetchColumn() ?: 0;
 
@@ -48,7 +48,7 @@ $sqlDetalhes = "SELECT data_transacao, descricao, valor, tipo
                 AND contexto = ? 
                 AND YEAR(data_transacao) = ?" . $filtroMesSql . " 
                 ORDER BY data_transacao ASC";
-$stmtDetalhes = $pdo->prepare($sqlDetalhes);
+$stmtDetalhes = $pdo_read->prepare($sqlDetalhes);
 $stmtDetalhes->execute($paramsSQL);
 $lancamentos_detalhados = $stmtDetalhes->fetchAll(PDO::FETCH_ASSOC);
 
@@ -85,7 +85,7 @@ $sql_inv = "SELECT ativo, categoria, valor_investido, valor_atual, data_aporte
             AND contexto = ?
             ORDER BY data_aporte ASC";
 
-$stmt_inv = $pdo->prepare($sql_inv);
+$stmt_inv = $pdo_read->prepare($sql_inv);
 // Passamos o $mes e $ano para a consulta
 $stmt_inv->execute([$user_id, $contexto]);
 $lista_investimentos = $stmt_inv->fetchAll(PDO::FETCH_ASSOC);
@@ -109,7 +109,7 @@ $sqlResumo = "SELECT
               FROM transacoes 
               WHERE usuario_id = ? AND contexto = ? 
               AND YEAR(data_transacao) = ?" . $filtroMesSql;
-$stmt = $pdo->prepare($sqlResumo);
+$stmt = $pdo_read->prepare($sqlResumo);
 $stmt->execute($paramsSQL);
 $resumo = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -129,7 +129,7 @@ $sqlCat = "SELECT categoria, SUM(valor) as total
            WHERE usuario_id = ? AND contexto = ? AND tipo not in ('receita','saldo','mensalidade','tronco')
            AND YEAR(data_transacao) = ?" . $filtroMesSql . "
            GROUP BY categoria ORDER BY total DESC";
-$stmt = $pdo->prepare($sqlCat);
+$stmt = $pdo_read->prepare($sqlCat);
 $stmt->execute($paramsSQL);
 $categorias = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -170,7 +170,7 @@ $sqlEvo = "SELECT
            WHERE usuario_id = ? AND contexto = ? 
            AND data_transacao >= ?
            GROUP BY mes_ano";
-$stmt = $pdo->prepare($sqlEvo);
+$stmt = $pdo_read->prepare($sqlEvo);
 $stmt->execute([$user_id, $contexto, $dataCorte]);
 $evolucao = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -192,7 +192,7 @@ $sqlEvoInv = "SELECT
            WHERE usuario_id = ? AND contexto = ? 
            AND data_aporte >= ?
            GROUP BY mes_ano";
-$stmt = $pdo->prepare($sqlEvoInv);
+$stmt = $pdo_read->prepare($sqlEvoInv);
 $stmt->execute([$user_id, $contexto, $dataCorte]);
 $evolucaoInv = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

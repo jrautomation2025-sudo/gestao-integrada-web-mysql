@@ -11,7 +11,7 @@ $tenant_id = $_SESSION['tenant_id'];
 
 try {
     // Busca as configurações atuais do usuário/tenant
-    $stmt = $pdo->prepare("SELECT whatsapp_grupo_id, whatsapp_instance_id, whatsapp_token FROM usuarios WHERE id = ?");
+    $stmt = $pdo_read->prepare("SELECT whatsapp_grupo_id, whatsapp_instance_id, whatsapp_token FROM usuarios WHERE id = ?");
     $stmt->execute([$tenant_id]);
     $configAtual = $stmt->fetch(PDO::FETCH_ASSOC);
     

@@ -8,14 +8,14 @@ $user_id = $_SESSION['user_id'];
 $ga = new GoogleAuthenticator();
 
 // Busca dados
-$stmt = $pdo->prepare("SELECT secret_2fa, ativo_2fa, email FROM usuarios WHERE id = ?");
+$stmt = $pdo_read->prepare("SELECT secret_2fa, ativo_2fa, email FROM usuarios WHERE id = ?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 $secret = $user['secret_2fa'];
 if (!$secret) {
     $secret = $ga->createSecret();
-    $pdo->prepare("UPDATE usuarios SET secret_2fa = ? WHERE id = ?")->execute([$secret, $user_id]);
+    $pdo_write->prepare("UPDATE usuarios SET secret_2fa = ? WHERE id = ?")->execute([$secret, $user_id]);
 }
 
 // Gera a URL do QR Code
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($acao === 'ativar') {
         if ($ga->verifyCode($secret, $codigo)) {
-            $pdo->prepare("UPDATE usuarios SET ativo_2fa = 1 WHERE id = ?")->execute([$user_id]);
+            $pdo_write->prepare("UPDATE usuarios SET ativo_2fa = 1 WHERE id = ?")->execute([$user_id]);
             header("Location: seguranca?msg=ativado"); exit;
         } else {
             $erro = "Código incorreto. Tente novamente.";
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($acao === 'desativar') {
-        $pdo->prepare("UPDATE usuarios SET ativo_2fa = 0, secret_2fa = NULL WHERE id = ?")->execute([$user_id]);
+        $pdo_write->prepare("UPDATE usuarios SET ativo_2fa = 0, secret_2fa = NULL WHERE id = ?")->execute([$user_id]);
         header("Location: seguranca?msg=desativado"); exit;
     }
 }

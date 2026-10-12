@@ -14,7 +14,7 @@ $is_superadmin = isset($_SESSION['is_superadmin']) && $_SESSION['is_superadmin']
 $sqlUsers = "SELECT * FROM usuarios WHERE 1=1";
     if (!$is_superadmin) $sqlUsers .= " AND id = :meu_id OR dono_id = :meu_id";
     
-    $stmtUsers = $pdo->prepare($sqlUsers);
+    $stmtUsers = $pdo_read->prepare($sqlUsers);
     if (!$is_superadmin) $stmtUsers->execute([':meu_id' => $meu_id]);
     else $stmtUsers->execute();
     

@@ -22,7 +22,7 @@ if ($tipo_relatorio === 'beneficencia') {
             LEFT JOIN clientes c ON b.membro_id = c.id 
             WHERE b.tenant_id = ? AND MONTH(b.data_registro) = ? AND YEAR(b.data_registro) = ? 
             ORDER BY b.data_registro DESC";
-    $stmt = $pdo->prepare($sql);
+    $stmt = $pdo_read->prepare($sql);
     $stmt->execute([$user_id, $mes, $ano]);
     $movimentacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
@@ -34,7 +34,7 @@ if ($tipo_relatorio === 'beneficencia') {
     $sql = "SELECT * FROM hospitalaria_acompanhamentos 
             WHERE tenant_id = ? AND MONTH(data_inicio) = ? AND YEAR(data_inicio) = ? 
             ORDER BY data_inicio DESC";
-    $stmt = $pdo->prepare($sql);
+    $stmt = $pdo_read->prepare($sql);
     $stmt->execute([$user_id, $mes, $ano]);
     $movimentacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }

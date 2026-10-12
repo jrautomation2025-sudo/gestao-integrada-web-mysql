@@ -37,11 +37,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['frequency'])) {
         try {
             $payload = json_encode(['descricao' => $descricao, 'valor' => $valor]);
             if (!empty($id)) {
-                $stmt = $pdo->prepare("UPDATE secretaria_agendamentos SET data_hora_agendada = ?, payload_json = ?, frequency = ?, acao = ?, day_of_month = ?, time_of_day = ? WHERE id = ? AND tenant_id = ? AND tipo = 'tesouraria'");
+                $stmt = $pdo_write->prepare("UPDATE secretaria_agendamentos SET data_hora_agendada = ?, payload_json = ?, frequency = ?, acao = ?, day_of_month = ?, time_of_day = ? WHERE id = ? AND tenant_id = ? AND tipo = 'tesouraria'");
                 $stmt->execute([$data_hora_agendada, $payload, $frequency, $acao, $day_of_month, $time_of_day, $id, $tenant_id]);
                 $_SESSION['mensagem'] = "Agendamento atualizado!";
             } else {
-                $stmt = $pdo->prepare("INSERT INTO secretaria_agendamentos (tenant_id, data_hora_agendada, tipo, payload_json, status, frequency, acao, day_of_month, time_of_day) VALUES (?, ?, 'tesouraria', ?, 'pendente', ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO secretaria_agendamentos (tenant_id, data_hora_agendada, tipo, payload_json, status, frequency, acao, day_of_month, time_of_day) VALUES (?, ?, 'tesouraria', ?, 'pendente', ?, ?, ?, ?)");
                 $stmt->execute([$tenant_id, $data_hora_agendada, $payload, $frequency, $acao, $day_of_month, $time_of_day]);
                 $_SESSION['mensagem'] = "Agendamento registrado!";
             }
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['frequency'])) {
 // 2. Exclusão
 if (isset($_GET['excluir'])) {
     try {
-        $stmt = $pdo->prepare("DELETE FROM secretaria_agendamentos WHERE id = ? AND tenant_id = ? AND tipo = 'tesouraria'");
+        $stmt = $pdo_write->prepare("DELETE FROM secretaria_agendamentos WHERE id = ? AND tenant_id = ? AND tipo = 'tesouraria'");
         $stmt->execute([$_GET['excluir'], $tenant_id]);
         $_SESSION['mensagem'] = "Agendamento excluído!";
     } catch (PDOException $e) {
@@ -71,7 +71,7 @@ if (isset($_GET['excluir'])) {
 // Busca agendamentos
 $agendamentos = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM secretaria_agendamentos WHERE tenant_id = ? AND tipo = 'tesouraria' ORDER BY data_hora_agendada ASC");
+    $stmt = $pdo_read->prepare("SELECT * FROM secretaria_agendamentos WHERE tenant_id = ? AND tipo = 'tesouraria' ORDER BY data_hora_agendada ASC");
     $stmt->execute([$tenant_id]);
     $agendamentos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {}

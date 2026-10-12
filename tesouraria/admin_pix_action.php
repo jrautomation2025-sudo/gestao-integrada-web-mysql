@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         // 2. Insere ou Atualiza APENAS para o usuario_id logado
-        $stmt = $pdo->prepare("
+        $stmt = $pdo_write->prepare("
             INSERT INTO configuracoes_pix (usuario_id, chave_pix, titular, cidade) 
             VALUES (:usuario_id, :chave, :titular, :cidade)
             ON DUPLICATE KEY UPDATE 

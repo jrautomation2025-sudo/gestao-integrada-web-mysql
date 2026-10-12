@@ -32,12 +32,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             if (empty($id)) {
                 // Novo Registro
-                $stmt = $pdo->prepare("INSERT INTO hospitalaria_acompanhamentos (tenant_id, nome_assistido, tipo_relacao, motivo, status, data_inicio, ultima_visita, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO hospitalaria_acompanhamentos (tenant_id, nome_assistido, tipo_relacao, motivo, status, data_inicio, ultima_visita, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$user_id, $nome_assistido, $tipo_relacao, $motivo, $status, $data_inicio, $ultima_visita, $observacoes]);
                 $msg_sucesso = "Acompanhamento registrado com sucesso!";
             } else {
                 // Atualizar Registro Existente
-                $stmt = $pdo->prepare("UPDATE hospitalaria_acompanhamentos SET nome_assistido=?, tipo_relacao=?, motivo=?, status=?, data_inicio=?, ultima_visita=?, observacoes=? WHERE id=? AND tenant_id=?");
+                $stmt = $pdo_write->prepare("UPDATE hospitalaria_acompanhamentos SET nome_assistido=?, tipo_relacao=?, motivo=?, status=?, data_inicio=?, ultima_visita=?, observacoes=? WHERE id=? AND tenant_id=?");
                 $stmt->execute([$nome_assistido, $tipo_relacao, $motivo, $status, $data_inicio, $ultima_visita, $observacoes, $id, $user_id]);
                 $msg_sucesso = "Acompanhamento atualizado com sucesso!";
             }
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($acao === 'excluir') {
         $id_excluir = $_POST['id_excluir'] ?? '';
         try {
-            $stmt = $pdo->prepare("DELETE FROM hospitalaria_acompanhamentos WHERE id = ? AND tenant_id = ?");
+            $stmt = $pdo_write->prepare("DELETE FROM hospitalaria_acompanhamentos WHERE id = ? AND tenant_id = ?");
             $stmt->execute([$id_excluir, $user_id]);
             $msg_sucesso = "Registro excluído com sucesso!";
         } catch (PDOException $e) {
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // =========================================================================
 // BUSCA OS REGISTROS PARA LISTAGEM
 // =========================================================================
-$stmt = $pdo->prepare("SELECT * FROM hospitalaria_acompanhamentos WHERE tenant_id = ? ORDER BY FIELD(status, 'Em Acompanhamento', 'Finalizado', 'Óbito'), data_inicio DESC");
+$stmt = $pdo_read->prepare("SELECT * FROM hospitalaria_acompanhamentos WHERE tenant_id = ? ORDER BY FIELD(status, 'Em Acompanhamento', 'Finalizado', 'Óbito'), data_inicio DESC");
 $stmt->execute([$user_id]);
 $lista = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

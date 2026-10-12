@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $senha = $_POST['senha'] ?? '';
 
     // Ajuste o nome da tabela de usuários/chanceleres conforme a sua base se necessário (ex: usuarios ou chancelaria_usuarios)
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = ? LIMIT 1");
+    $stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE email = ? LIMIT 1");
     $stmt->execute([$email]);
     $usuario = $stmt->fetch();
 

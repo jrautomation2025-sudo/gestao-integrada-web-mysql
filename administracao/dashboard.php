@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_usuario'])) {
     } else {
         try {
             // Ajuste o nome da sua tabela de usuários caso seja diferente (ex: 'users', 'usuarios_sistema')
-            $stmt = $pdo->prepare("UPDATE usuarios SET permissao = ? WHERE id = ?");
+            $stmt = $pdo_write->prepare("UPDATE usuarios SET permissao = ? WHERE id = ?");
             $stmt->execute([$nova_situacao, $alvo_id]);
             $_SESSION['mensagem'] = "Status do usuário atualizado para: $nova_situacao.";
         } catch (PDOException $e) {
@@ -56,7 +56,7 @@ try {
     $sqlUsers = "SELECT COUNT(*) FROM usuarios WHERE 1=1";
     if (!$is_superadmin) $sqlUsers .= " AND id = :tenant_id OR dono_id = :tenant_id";
     
-    $stmtUsers = $pdo->prepare($sqlUsers);
+    $stmtUsers = $pdo_read->prepare($sqlUsers);
     if (!$is_superadmin) $stmtUsers->execute([':tenant_id' => $tenant_id]);
     else $stmtUsers->execute();
     
@@ -68,7 +68,7 @@ try {
     $sqlOnline = "SELECT COUNT(DISTINCT usuario_id) FROM logs_acesso WHERE acao = 'login' AND data_acesso >= NOW() - INTERVAL 1 DAY";
     if (!$is_superadmin) $sqlOnline .= " AND tenant_id = :tenant_id";
     
-    $stmtOnline = $pdo->prepare($sqlOnline);
+    $stmtOnline = $pdo_read->prepare($sqlOnline);
     if (!$is_superadmin) $stmtOnline->execute([':tenant_id' => $tenant_id]);
     else $stmtOnline->execute();
     
@@ -82,7 +82,7 @@ try {
     if (!$is_superadmin) $sqlLista .= " AND id = :tenant_id OR dono_id = :tenant_id";
     $sqlLista .= " ORDER BY nome ASC";
     
-    $stmtLista = $pdo->prepare($sqlLista);
+    $stmtLista = $pdo_read->prepare($sqlLista);
     if (!$is_superadmin) $stmtLista->execute([':tenant_id' => $tenant_id]);
     else $stmtLista->execute();
     
@@ -98,7 +98,7 @@ try {
     if (!$is_superadmin) $sqlLogs .= " AND l.tenant_id = :tenant_id";
     $sqlLogs .= " ORDER BY l.data_acesso DESC LIMIT 5";
     
-    $stmtLogs = $pdo->prepare($sqlLogs);
+    $stmtLogs = $pdo_read->prepare($sqlLogs);
     if (!$is_superadmin) $stmtLogs->execute([':tenant_id' => $tenant_id]);
     else $stmtLogs->execute();
     
@@ -113,7 +113,7 @@ try {
 // =========================================================
 // 3. DADOS DO PERFIL E BADGE
 // =========================================================
-$stmt = $pdo->prepare("SELECT nome, telefone, plano, creditos_ia, plano_expiracao FROM usuarios WHERE id = ?");
+$stmt = $pdo_read->prepare("SELECT nome, telefone, plano, creditos_ia, plano_expiracao FROM usuarios WHERE id = ?");
 $stmt->execute([$tenant_id]);
 $meuPerfil = $stmt->fetch(PDO::FETCH_ASSOC);
 ?>

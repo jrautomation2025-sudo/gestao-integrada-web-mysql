@@ -12,7 +12,7 @@ $tenant_id = $_SESSION['tenant_id'];
 
 try {
     // Busca todos os obreiros da Loja
-    $stmtMembros = $pdo->prepare("SELECT * FROM chancelaria_membros WHERE tenant_id = ? ORDER BY nome ASC");
+    $stmtMembros = $pdo_read->prepare("SELECT * FROM chancelaria_membros WHERE tenant_id = ? ORDER BY nome ASC");
     $stmtMembros->execute([$tenant_id]);
     $membros = $stmtMembros->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

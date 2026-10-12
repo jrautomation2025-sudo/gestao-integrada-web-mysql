@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Exclui a transação GARANTINDO que pertence ao usuário logado
         $sql = "DELETE FROM transacoes WHERE id = ? AND usuario_id = ?";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         $stmt->execute([$id, $user_id]);
 
         if ($stmt->rowCount() > 0) {

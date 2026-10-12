@@ -17,7 +17,7 @@ echo "<h1>🕵️ Detetive de Senhas</h1>";
 echo "Testando login para: <strong>$email</strong><br><hr>";
 
 // 1. Busca no banco
-$stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = ?");
+$stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE email = ?");
 $stmt->execute([$email]);
 $user = $stmt->fetch();
 

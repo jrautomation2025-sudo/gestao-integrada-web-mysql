@@ -25,7 +25,7 @@ $filtro_mes = isset($_GET['mes']) ? $_GET['mes'] : date('m');
 $filtro_ano = isset($_GET['ano']) && $_GET['ano'] !== '' ? $_GET['ano'] : date('Y');
 
 // Busca todos os responsaveis para popular o Modal
-$stmtTodos = $pdo->prepare("SELECT * FROM tesouraria_alugueis_responsavel WHERE tenant_id = ? ORDER BY responsavel ASC");
+$stmtTodos = $pdo_read->prepare("SELECT * FROM tesouraria_alugueis_responsavel WHERE tenant_id = ? ORDER BY responsavel ASC");
 $stmtTodos->execute([$user_id]);
 $todosResp = $stmtTodos->fetchAll(PDO::FETCH_ASSOC);
 
@@ -40,10 +40,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
     if (!empty($loja_coirma) && !empty($valor) && !empty($vencimento)) {
         try {
-            $pdo->beginTransaction();
+            $pdo_write->beginTransaction();
 
             // 1. Insere na tabela específica de aluguéis do templo
-            $stmt = $pdo->prepare("
+            $stmt = $pdo_write->prepare("
                 INSERT INTO tesouraria_alugueis_templo (tenant_id, loja_coirma, responsavel_id, valor, tipo, vencimento, status, observacoes) 
                 VALUES ( ?, ?, ?, ?, ?, ?, 'Pendente', ?)
             ");
@@ -52,20 +52,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             // 2. Insere automaticamente na tabela oficial 'transacoes'
             $descricao_transacao = "Aluguel de Templo - " . $loja_coirma . (!empty($observacoes) ? " ({$observacoes})" : "");
             
-            $stmt_trans = $pdo->prepare("
+            $stmt_trans = $pdo_write->prepare("
                 INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) 
                 VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')
             ");
             $stmt_trans->execute([$user_id, $descricao_transacao, $valor, $vencimento]);
 
-            $pdo->commit();
+            $pdo_write->commit();
             // Grava mensagem na sessão e redireciona
             $_SESSION['mensagem'] = "Aluguel lançado e espelhado nas transações com sucesso!";
             $mensagem = $_SESSION['mensagem'];
             header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
             exit;
         } catch (Exception $e) {
-            $pdo->rollBack();
+            $pdo_write->rollBack();
             $_SESSION['erro'] = "Erro ao cadastrar e integrar: " . $e->getMessage();
             $erro = $_SESSION['erro'];
             header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
 
         if (!empty($id) && !empty($loja_coirma) && !empty($valor) && !empty($vencimento)) {
             try {
-                $stmt = $pdo->prepare("
+                $stmt = $pdo_write->prepare("
                     UPDATE tesouraria_alugueis_templo 
                     SET loja_coirma = ?, responsavel_id = ?, valor = ?, tipo=?, vencimento = ?, observacoes = ? 
                     WHERE id = ? AND tenant_id = ?
@@ -126,7 +126,7 @@ if (isset($_GET['excluir'])) {
     } else {
         $id_excluir = (int)$_GET['excluir'];
         try {
-            $stmt_del = $pdo->prepare("DELETE FROM tesouraria_alugueis_templo WHERE id = ? AND tenant_id = ?");
+            $stmt_del = $pdo_write->prepare("DELETE FROM tesouraria_alugueis_templo WHERE id = ? AND tenant_id = ?");
             $stmt_del->execute([$id_excluir, $user_id]);
             $_SESSION['mensagem'] = "Registro excluído com sucesso!";
             $mensagem = $_SESSION['mensagem'];
@@ -145,7 +145,7 @@ if (isset($_GET['excluir'])) {
 if (isset($_GET['baixar'])) {
     $id_baixa = (int)$_GET['baixar'];
     $data_hoje = date('Y-m-d');
-    $stmt = $pdo->prepare("UPDATE tesouraria_alugueis_templo SET status = 'Pago', pagamento = ? WHERE id = ? AND tenant_id = ?");
+    $stmt = $pdo_write->prepare("UPDATE tesouraria_alugueis_templo SET status = 'Pago', pagamento = ? WHERE id = ? AND tenant_id = ?");
     $stmt->execute([$data_hoje, $id_baixa, $user_id]);
     header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
     exit;
@@ -155,13 +155,13 @@ if (isset($_GET['baixar'])) {
 if (isset($_GET['enviar_recibo'])) {
     $id_recibo = (int)$_GET['enviar_recibo'];
     
-    $stmt_rec = $pdo->prepare("SELECT tt.*, tr.* FROM tesouraria_alugueis_templo tt
+    $stmt_rec = $pdo_read->prepare("SELECT tt.*, tr.* FROM tesouraria_alugueis_templo tt
                                LEFT JOIN tesouraria_alugueis_responsavel tr ON tt.responsavel_id = tr.id 
                                WHERE tt.id = ? AND tt.tenant_id = ?");
     $stmt_rec->execute([$id_recibo, $user_id]);
     $dado_aluguel = $stmt_rec->fetch(PDO::FETCH_ASSOC);
     
-    $stmtLodge = $pdo->prepare("
+    $stmtLodge = $pdo_read->prepare("
     SELECT l.nome, l.url_logo, l.endereco, l.localizacao
     FROM secretaria_lojas l
     JOIN usuarios u ON u.loja_id = l.id
@@ -224,7 +224,7 @@ if (isset($_GET['enviar_recibo'])) {
 }
 
 // 1. Resumo Financeiro (Se $filtro_mes estiver vazio, filtra apenas pelo ano)
-$stmt_resumo = $pdo->prepare("
+$stmt_resumo = $pdo_read->prepare("
     SELECT 
         SUM(CASE WHEN status = 'Pago' THEN valor ELSE 0 END) as total_recebido,
         SUM(CASE WHEN status = 'Pendente' THEN valor ELSE 0 END) as total_pendente
@@ -238,7 +238,7 @@ $total_recebido = $resumo['total_recebido'] ?? 0;
 $total_pendente = $resumo['total_pendente'] ?? 0;
 
 // 2. Lista de Aluguéis Registrados (Dinâmica para mês específico ou todos os meses do ano)
-$stmt_lista = $pdo->prepare("
+$stmt_lista = $pdo_read->prepare("
     SELECT tt.*, tr.responsavel, tr.telefone, tr.email FROM tesouraria_alugueis_templo tt
     LEFT JOIN tesouraria_alugueis_responsavel tr
     ON tt.responsavel_id = tr.id

@@ -33,7 +33,7 @@ $sql = "SELECT l.data_acesso, l.ip, l.acao, l.modulo, u.nome, u.email
         AND YEAR(l.data_acesso) = :ano
         ORDER BY l.data_acesso DESC";
         
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 $stmt->execute([
     ':tenant_id' => $tenant_id,
     ':mes'       => $filtro_mes,
@@ -59,7 +59,7 @@ if (!$is_superadmin) {
 
 $sql .= " ORDER BY l.data_acesso DESC";
         
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 
 // Monta os parâmetros dinamicamente
 $params = [

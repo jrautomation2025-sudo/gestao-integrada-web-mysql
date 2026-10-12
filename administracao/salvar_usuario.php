@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         try {
             if (!$is_superadmin) {
-                $check = $pdo->prepare("SELECT id FROM usuarios WHERE id = :id AND dono_id = :tenant_id");
+                $check = $pdo_read->prepare("SELECT id FROM usuarios WHERE id = :id AND dono_id = :tenant_id");
                 $check->execute([':id' => $id_excluir, ':tenant_id' => $meu_tenant_id]);
                 if ($check->rowCount() === 0) {
                     $_SESSION['erro'] = "Você não tem permissão para excluir este usuário.";
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
             }
 
-            $stmtDel = $pdo->prepare("DELETE FROM usuarios WHERE id = ?");
+            $stmtDel = $pdo_write->prepare("DELETE FROM usuarios WHERE id = ?");
             $stmtDel->execute([$id_excluir]);
 
             // Se for chamada via AJAX/Fetch, pode retornar JSON, mas como é form normal:
@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         try {
             if (!$is_superadmin) {
-                $check = $pdo->prepare("SELECT * FROM usuarios WHERE id = :id AND dono_id = :tenant_id");
+                $check = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = :id AND dono_id = :tenant_id");
                 $check->execute([':id' => $id_usuario, ':tenant_id' => $meu_tenant_id]);
                 $usuarioAlvo = $check->fetch(PDO::FETCH_ASSOC);
                 if (!$usuarioAlvo) {
@@ -77,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     exit;
                 }
             } else {
-                $check = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+                $check = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
                 $check->execute([$id_usuario]);
                 $usuarioAlvo = $check->fetch(PDO::FETCH_ASSOC);
             }
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $senha_hash = password_hash($senha_padrao, PASSWORD_DEFAULT);
 
             // Reseta senha, marca first_access = 1 e ativo_2fa = 2
-            $stmtUpdate = $pdo->prepare("UPDATE usuarios SET senha = ?, first_access = 1, ativo_2fa = 2, token_2fa = NULL WHERE id = ?");
+            $stmtUpdate = $pdo_write->prepare("UPDATE usuarios SET senha = ?, first_access = 1, ativo_2fa = 2, token_2fa = NULL WHERE id = ?");
             $stmtUpdate->execute([$senha_hash, $id_usuario]);
 
             // Webhook do n8n
@@ -146,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             
             $sql = "INSERT INTO usuarios (nome, email, telefone, senha, is_admin, perfil, permissao, ativo_2fa, first_access, dono_id) 
                         VALUES (:nome, :email, :telefone, :senha, :is_admin, :perfil, :permissao, :ativo_2fa, :first_access, :dono_id)";
-                $stmt = $pdo->prepare($sql);
+                $stmt = $pdo_write->prepare($sql);
                 $stmt->execute([
                     ':nome' => $nome,
                     ':email' => $email,
@@ -160,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     ':dono_id' => $meu_tenant_id 
             ]);
 
-            $config = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+            $config = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
             $config->execute([$meu_tenant_id]);
             $usuarioConf = $config->fetch(PDO::FETCH_ASSOC);
             
@@ -192,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         } else {
             // --- EDITANDO UM USUÁRIO ---
             if (!$is_superadmin) {
-                $check = $pdo->prepare("SELECT id FROM usuarios WHERE id = :id AND (id = :meu_id OR dono_id = :tenant_id)");
+                $check = $pdo_read->prepare("SELECT id FROM usuarios WHERE id = :id AND (id = :meu_id OR dono_id = :tenant_id)");
                 $check->execute([':id' => $id, ':meu_id' => $meu_id, ':tenant_id' => $meu_tenant_id]);
                 if ($check->rowCount() === 0) {
                     die("Você não tem permissão para editar este usuário.");
@@ -202,11 +202,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             if (!empty($senha)) {
                 $senha_hash = password_hash($senha, PASSWORD_DEFAULT);
                 $sql = "UPDATE usuarios SET nome = :nome, email = :email, telefone = :telefone, senha = :senha, is_admin = :is_admin, perfil = :perfil WHERE id = :id";
-                $stmt = $pdo->prepare($sql);
+                $stmt = $pdo_write->prepare($sql);
                 $stmt->execute([':nome'=>$nome, ':email'=>$email, ':telefone'=>$telefone, ':senha'=>$senha_hash, ':is_admin'=>$is_admin, ':perfil'=>$perfil, ':id'=>$id]);
             } else {
                 $sql = "UPDATE usuarios SET nome = :nome, email = :email, telefone = :telefone, is_admin = :is_admin, perfil = :perfil WHERE id = :id";
-                $stmt = $pdo->prepare($sql);
+                $stmt = $pdo_write->prepare($sql);
                 $stmt->execute([':nome'=>$nome, ':email'=>$email, ':telefone'=>$telefone, ':is_admin'=>$is_admin, ':perfil'=>$perfil, ':id'=>$id]);
             }
         }

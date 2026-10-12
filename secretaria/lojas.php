@@ -27,7 +27,7 @@ unset($_SESSION['mensagem'], $_SESSION['erro']);
 if (isset($_GET['associar_loja']) && $is_dono) {
     $id_associar = (int) $_GET['associar_loja'];
     try {
-        $stmt = $pdo->prepare("UPDATE usuarios SET loja_id = ? WHERE id = ?");
+        $stmt = $pdo_write->prepare("UPDATE usuarios SET loja_id = ? WHERE id = ?");
         $stmt->execute([$id_associar, $tenant_id]);
         $_SESSION['mensagem'] = "Loja definida como sua Principal com sucesso!";
     } catch (PDOException $e) {
@@ -39,7 +39,7 @@ if (isset($_GET['associar_loja']) && $is_dono) {
 
 if (isset($_GET['desassociar_loja']) && $is_dono) {
     try {
-        $stmt = $pdo->prepare("UPDATE usuarios SET loja_id = NULL WHERE id = ?");
+        $stmt = $pdo_write->prepare("UPDATE usuarios SET loja_id = NULL WHERE id = ?");
         $stmt->execute([$tenant_id]);
         $_SESSION['mensagem'] = "Associação de Loja Principal removida com sucesso!";
     } catch (PDOException $e) {
@@ -71,12 +71,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nome_loja'])) {
         try {
             if (!empty($id)) {
                 // Atualizar
-                $stmt = $pdo->prepare("UPDATE secretaria_lojas SET nome = ?, potencia = ?, telefone = ?, email = ?, rito = ?, localizacao = ?, dia_semana = ?, frequencia = ?, horario = ?, data_fundacao = ?, endereco = ?, url_logo = ? WHERE id = ?");
+                $stmt = $pdo_write->prepare("UPDATE secretaria_lojas SET nome = ?, potencia = ?, telefone = ?, email = ?, rito = ?, localizacao = ?, dia_semana = ?, frequencia = ?, horario = ?, data_fundacao = ?, endereco = ?, url_logo = ? WHERE id = ?");
                 $stmt->execute([$nome, $potencia, $telefone, $email, $rito, $localizacao, $dia_semana, $frequencia, $horario, $data_fundacao, $endereco, $url_logo, $id]);
                 $_SESSION['mensagem'] = "Loja atualizada com sucesso!";
             } else {
                 // Inserir
-                $stmt = $pdo->prepare("INSERT INTO secretaria_lojas (nome, potencia, telefone, email, rito, localizacao, dia_semana, frequencia, horario, data_fundacao, endereco, url_logo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO secretaria_lojas (nome, potencia, telefone, email, rito, localizacao, dia_semana, frequencia, horario, data_fundacao, endereco, url_logo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$nome, $potencia, $telefone, $email, $rito, $localizacao, $dia_semana, $frequencia, $horario, $data_fundacao, $endereco, $url_logo]);
                 $_SESSION['mensagem'] = "Loja cadastrada com sucesso!";
             }
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nome_loja'])) {
 if (isset($_GET['excluir'])) {
     $idExcluir = $_GET['excluir'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM secretaria_lojas WHERE id = ?");
+        $stmt = $pdo_write->prepare("DELETE FROM secretaria_lojas WHERE id = ?");
         $stmt->execute([$idExcluir]);
         $_SESSION['mensagem'] = "Loja excluída com sucesso!";
     } catch (PDOException $e) {
@@ -114,7 +114,7 @@ if (isset($_GET['excluir'])) {
 // Descobre qual é a Loja Principal associada a este Tenant
 $loja_principal_id = null;
 try {
-    $stmt_tenant = $pdo->prepare("SELECT loja_id FROM usuarios WHERE id = ?");
+    $stmt_tenant = $pdo_read->prepare("SELECT loja_id FROM usuarios WHERE id = ?");
     $stmt_tenant->execute([$tenant_id]);
     $loja_principal_id = $stmt_tenant->fetchColumn();
 } catch (PDOException $e) {
@@ -124,7 +124,7 @@ try {
 // Busca todas as lojas cadastradas
 $lojas = [];
 try {
-    $stmt = $pdo->prepare("SELECT * FROM secretaria_lojas ORDER BY nome ASC");
+    $stmt = $pdo_read->prepare("SELECT * FROM secretaria_lojas ORDER BY nome ASC");
     $stmt->execute();
     $lojas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

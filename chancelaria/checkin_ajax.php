@@ -15,7 +15,7 @@ if (empty($token)) {
 }
 
 // Busca a sessão correspondente ao token
-$stmt = $pdo->prepare("SELECT * FROM chancelaria_sessoes WHERE token_presenca = ?");
+$stmt = $pdo_read->prepare("SELECT * FROM chancelaria_sessoes WHERE token_presenca = ?");
 $stmt->execute([$token]);
 $sessao = $stmt->fetch();
 
@@ -31,13 +31,13 @@ $tenant_id = $sessao['tenant_id'];
 if ($acao === 'buscar_obreiro') {
     $cim = trim($_GET['cim'] ?? '');
     
-    $stmt = $pdo->prepare("SELECT id, nome, cim, grau FROM obreiros WHERE cim = ? AND tenant_id = ?");
+    $stmt = $pdo_read->prepare("SELECT id, nome, cim, grau FROM obreiros WHERE cim = ? AND tenant_id = ?");
     $stmt->execute([$cim, $tenant_id]);
     $obreiro = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($obreiro) {
         // Verifica se já registrou presença nesta sessão
-        $stmtCheck = $pdo->prepare("SELECT id FROM presencas WHERE sessao_id = ? AND obreiro_id = ?");
+        $stmtCheck = $pdo_read->prepare("SELECT id FROM presencas WHERE sessao_id = ? AND obreiro_id = ?");
         $stmtCheck->execute([$sessao_id, $obreiro['id']]);
         if ($stmtCheck->fetch()) {
             echo json_encode(['status' => 'ja_registrado', 'mensagem' => 'Presença já foi registrada para este CIM nesta sessão!']);
@@ -54,7 +54,7 @@ if ($acao === 'buscar_obreiro') {
 if ($acao === 'buscar_visitante') {
     $termo = trim($_GET['termo'] ?? '');
     
-    $stmt = $pdo->prepare("SELECT * FROM visitantes WHERE (cim = ? OR nome LIKE ?) AND tenant_id = ? LIMIT 1");
+    $stmt = $pdo_read->prepare("SELECT * FROM visitantes WHERE (cim = ? OR nome LIKE ?) AND tenant_id = ? LIMIT 1");
     $stmt->execute([$termo, "%$termo%", $tenant_id]);
     $visitante = $stmt->fetch(PDO::FETCH_ASSOC);
 

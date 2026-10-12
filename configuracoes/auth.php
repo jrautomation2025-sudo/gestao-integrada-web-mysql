@@ -37,7 +37,7 @@ if ($action === 'login_api') {
         exit;
     }
 
-    $stmt = $pdo->prepare("SELECT id, nome, senha, plano, is_admin FROM usuarios WHERE email = ?");
+    $stmt = $pdo_read->prepare("SELECT id, nome, senha, plano, is_admin FROM usuarios WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -58,7 +58,7 @@ if ($action === 'login_api') {
         $refreshExp = date('Y-m-d H:i:s', strtotime('+7 days'));
 
         // Salvar Refresh Token no banco
-        $pdo->prepare("UPDATE usuarios SET refresh_token = ?, refresh_token_exp = ? WHERE id = ?")
+        $pdo_write->prepare("UPDATE usuarios SET refresh_token = ?, refresh_token_exp = ? WHERE id = ?")
             ->execute([$refreshToken, $refreshExp, $user['id']]);
 
         echo json_encode([
@@ -89,7 +89,7 @@ if ($action === 'login') {
     $senha = $_POST['senha'];
     $perfil = $_POST['perfil'];
 
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE email = ?");
+    $stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE email = ?");
     $stmt->execute([$email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -112,7 +112,7 @@ if ($action === 'login') {
     if ($user['ativo_2fa'] == 2 ) { // Garante que não é admin
         $token_2fa = sprintf("%06d", mt_rand(1, 999999));
         
-        $stmtToken = $pdo->prepare("UPDATE usuarios SET token_2fa = ? WHERE id = ?");
+        $stmtToken = $pdo_write->prepare("UPDATE usuarios SET token_2fa = ? WHERE id = ?");
         $stmtToken->execute([$token_2fa, $user['id']]);
         
         $telefone_limpo = preg_replace('/[^0-9]/', '', $user['telefone']);
@@ -175,7 +175,7 @@ if ($action === 'login') {
         $data_agora = date('Y-m-d H:i:s'); 
 
         // Adicionamos a coluna data_acesso no INSERT para sobrescrever o padrão do banco
-        $stmt_log = $pdo->prepare("INSERT INTO logs_acesso (tenant_id, usuario_id, modulo, ip, data_acesso) VALUES (:tenant, :user, :modulo, :ip, :data)");
+        $stmt_log = $pdo_write->prepare("INSERT INTO logs_acesso (tenant_id, usuario_id, modulo, ip, data_acesso) VALUES (:tenant, :user, :modulo, :ip, :data)");
         $stmt_log->execute([
             ':tenant' => $_SESSION['tenant_id'],
             ':user'   => $_SESSION['user_id'],
@@ -201,7 +201,7 @@ if ($action === 'verify_2fa') {
     }
 
     // Busca o usuário completo
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+    $stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
     $stmt->execute([$tempUserId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -241,7 +241,7 @@ if ($action === 'refresh_token') {
     }
 
     // Busca usuário pelo refresh token VÁLIDO
-    $stmt = $pdo->prepare("SELECT id, is_admin FROM usuarios WHERE refresh_token = ? AND refresh_token_exp > NOW()");
+    $stmt = $pdo_read->prepare("SELECT id, is_admin FROM usuarios WHERE refresh_token = ? AND refresh_token_exp > NOW()");
     $stmt->execute([$refreshToken]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -287,7 +287,7 @@ if ($action === 'register') {
     }
 
     // Verifica se email já existe
-    $stmtCheck = $pdo->prepare("SELECT id FROM usuarios WHERE email = ?");
+    $stmtCheck = $pdo_read->prepare("SELECT id FROM usuarios WHERE email = ?");
     $stmtCheck->execute([$email]);
     if ($stmtCheck->fetch()) {
         echo json_encode(['status' => 'error', 'message' => 'Email já cadastrado']);
@@ -314,7 +314,7 @@ if ($action === 'register') {
     // Insere no Banco
     // Nota: creditos_ia começa com 10 de cortesia
     // Como é um cadastro novo (Dono da conta), dono_id é NULL automaticamente
-    $stmt = $pdo->prepare("INSERT INTO usuarios (nome, email, telefone, senha, plano, plano_expiracao, creditos_ia, is_admin) VALUES (?, ?, ?, ?, ?, ?, 10, 1)");
+    $stmt = $pdo_write->prepare("INSERT INTO usuarios (nome, email, telefone, senha, plano, plano_expiracao, creditos_ia, is_admin) VALUES (?, ?, ?, ?, ?, ?, 10, 1)");
     $stmt->execute([$nome, $email, $telefone, $senhaHash, $plano, $validade]);
 
         // =====================================================================
@@ -364,13 +364,13 @@ if ($action === 'verify_2fa_whatsapp') {
         exit;
     }
 
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+    $stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
     $stmt->execute([$user_id]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && $user['token_2fa'] === $codigo_digitado) {
         // Limpa o token do WhatsApp
-        $stmtToken = $pdo->prepare("UPDATE usuarios SET token_2fa = NULL WHERE id = ?");
+        $stmtToken = $pdo_write->prepare("UPDATE usuarios SET token_2fa = NULL WHERE id = ?");
         $stmtToken->execute([$user_id]);
 
         // Verifica se é o primeiro acesso usando o novo campo 'first_access'
@@ -430,7 +430,7 @@ if ($action === 'update_first_password') {
             exit;
         }
         
-        $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+        $stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -447,7 +447,7 @@ if ($action === 'update_first_password') {
         }
 
         // Atualiza a senha e zera o first_access. O ativo_2fa permanece 2.
-        $stmtUpdate = $pdo->prepare("UPDATE usuarios SET senha = ?, first_access = 0 WHERE id = ?");
+        $stmtUpdate = $pdo_write->prepare("UPDATE usuarios SET senha = ?, first_access = 0 WHERE id = ?");
         $stmtUpdate->execute([password_hash($nova_senha, PASSWORD_DEFAULT), $user_id]);
 
         // Efetiva a sessão de login definitiva
@@ -475,7 +475,7 @@ if ($action === 'logout') {
 
     if ($uid) {
         // SEGURANÇA: Invalida o refresh token no banco
-        $stmt = $pdo->prepare("UPDATE usuarios SET refresh_token = NULL, refresh_token_exp = NULL WHERE id = ?");
+        $stmt = $pdo_write->prepare("UPDATE usuarios SET refresh_token = NULL, refresh_token_exp = NULL WHERE id = ?");
         $stmt->execute([$uid]);
     }
     
@@ -484,7 +484,7 @@ if ($action === 'logout') {
         $data_agora = date('Y-m-d H:i:s');
 
         // Adicionamos a coluna data_acesso no INSERT para sobrescrever o padrão do banco
-        $stmt_log = $pdo->prepare("INSERT INTO logs_acesso (tenant_id, usuario_id, ip, acao, data_acesso) VALUES (:tenant, :user, :ip, :acao, :data)");
+        $stmt_log = $pdo_write->prepare("INSERT INTO logs_acesso (tenant_id, usuario_id, ip, acao, data_acesso) VALUES (:tenant, :user, :ip, :acao, :data)");
         $stmt_log->execute([
             ':tenant' => $_SESSION['tenant_id'],
             ':user'   => $_SESSION['user_id'],
@@ -512,7 +512,7 @@ if ($action === 'ignore_2fa') {
     $userId = $_SESSION['user_id'];
     
     // Atualiza no banco para não mostrar mais
-    $pdo->prepare("UPDATE usuarios SET lembrete_2fa_ignorado = 1 WHERE id = ?")->execute([$userId]);
+    $pdo_write->prepare("UPDATE usuarios SET lembrete_2fa_ignorado = 1 WHERE id = ?")->execute([$userId]);
     
     // Limpa a variável da sessão também
     unset($_SESSION['show_2fa_alert']);
@@ -533,7 +533,7 @@ if ($action === 'upgrade_plan') {
 
     try {
         // 1. Busca dados do usuário (Nome e Telefone)
-        $stmt = $pdo->prepare("SELECT nome, telefone, email FROM usuarios WHERE id = ?");
+        $stmt = $pdo_read->prepare("SELECT nome, telefone, email FROM usuarios WHERE id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 

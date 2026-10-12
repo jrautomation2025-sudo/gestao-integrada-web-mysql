@@ -17,7 +17,7 @@ $anosDisponiveis = [];
 
 try {
     // Busca os anos disponíveis para o select de filtro
-    $stmtAnos = $pdo->prepare("SELECT DISTINCT YEAR(data_sessao) as ano FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY ano DESC");
+    $stmtAnos = $pdo_read->prepare("SELECT DISTINCT YEAR(data_sessao) as ano FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY ano DESC");
     $stmtAnos->execute([$tenant_id]);
     $anosDisponiveis = $stmtAnos->fetchAll(PDO::FETCH_COLUMN);
     
@@ -27,12 +27,12 @@ try {
     }
 
     if ($tipoRelatorio === 'obreiros') {
-        $stmt = $pdo->prepare("SELECT * FROM chancelaria_membros WHERE tenant_id = ? ORDER BY grau DESC, nome ASC");
+        $stmt = $pdo_read->prepare("SELECT * FROM chancelaria_membros WHERE tenant_id = ? ORDER BY grau DESC, nome ASC");
         $stmt->execute([$tenant_id]);
         $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } elseif ($tipoRelatorio === 'sessoes') {
-        $stmt = $pdo->prepare("SELECT s.*, 
+        $stmt = $pdo_read->prepare("SELECT s.*,
                                (SELECT COUNT(*) FROM chancelaria_presencas p WHERE p.sessao_id = s.id AND p.status_presenca = 'P') as presentes,
                                (SELECT COUNT(*) FROM chancelaria_visitantes p WHERE p.sessao_id = s.id ) as visitantes 
                                FROM chancelaria_sessoes s 
@@ -45,7 +45,7 @@ try {
 
     } elseif ($tipoRelatorio === 'frequencia') {
         // Busca o total de sessões realizadas no ano selecionado
-        $stmtTotalSessoes = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND status = 'Realizada' AND YEAR(data_sessao) = ?");
+        $stmtTotalSessoes = $pdo_read->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND status = 'Realizada' AND YEAR(data_sessao) = ?");
         $stmtTotalSessoes->execute([$tenant_id, $anoSelecionado]);
         $totalSessoesGeral = (int)$stmtTotalSessoes->fetchColumn();
 
@@ -63,7 +63,7 @@ try {
                     WHERE m.tenant_id = ? AND m.status = 'Ativo' AND m.presenca = 'obrigatoria'
                     ORDER BY m.nome ASC";
         
-        $stmtFreq = $pdo->prepare($sqlFreq);
+        $stmtFreq = $pdo_read->prepare($sqlFreq);
         $stmtFreq->execute([
             $tenant_id, $anoSelecionado, 
             $tenant_id, $anoSelecionado, 

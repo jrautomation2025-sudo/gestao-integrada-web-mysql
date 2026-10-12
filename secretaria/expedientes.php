@@ -18,7 +18,7 @@ unset($_SESSION['mensagem'], $_SESSION['erro']);
 
 // Busca os dados da Loja associada ao dono da conta (tenant_id)
 // O tenant_id no seu sistema representa o ID do dono na tabela de usuários.
-$stmtLodge = $pdo->prepare("
+$stmtLodge = $pdo_read->prepare("
     SELECT l.nome, l.url_logo, l.endereco 
     FROM secretaria_lojas l
     JOIN usuarios u ON u.loja_id = l.id
@@ -46,12 +46,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo_expediente']))
         try {
             if (!empty($id)) {
                 // Atualizar
-                $stmt = $pdo->prepare("UPDATE secretaria_expedientes SET titulo = ?, data_expediente = ?, tipo = ?, destinatario = ?, conteudo = ? WHERE id = ? AND tenant_id = ?");
+                $stmt = $pdo_write->prepare("UPDATE secretaria_expedientes SET titulo = ?, data_expediente = ?, tipo = ?, destinatario = ?, conteudo = ? WHERE id = ? AND tenant_id = ?");
                 $stmt->execute([$titulo, $data_expediente, $tipo, $destinatario, $conteudo, $id, $tenant_id]);
                 $_SESSION['mensagem'] = "Expediente atualizado com sucesso!";
             } else {
                 // Inserir
-                $stmt = $pdo->prepare("INSERT INTO secretaria_expedientes (tenant_id, titulo, data_expediente, tipo, destinatario, conteudo) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO secretaria_expedientes (tenant_id, titulo, data_expediente, tipo, destinatario, conteudo) VALUES (?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$tenant_id, $titulo, $data_expediente, $tipo, $destinatario, $conteudo]);
                 $_SESSION['mensagem'] = "Expediente cadastrado com sucesso!";
             }
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo_expediente']))
 if (isset($_GET['excluir'])) {
     $idExcluir = $_GET['excluir'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM secretaria_expedientes WHERE id = ? AND tenant_id = ?");
+        $stmt = $pdo_write->prepare("DELETE FROM secretaria_expedientes WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$idExcluir, $tenant_id]);
         $_SESSION['mensagem'] = "Expediente excluído com sucesso!";
     } catch (PDOException $e) {
@@ -87,7 +87,7 @@ $filtro_ano = isset($_GET['ano']) && $_GET['ano'] !== '' ? $_GET['ano'] : date('
 // Busca os expedientes cadastrados
 $expedientes = [];
 try {
-    $stmt = $pdo->prepare("
+    $stmt = $pdo_read->prepare("
         SELECT * FROM secretaria_expedientes 
         WHERE tenant_id = ? 
         AND MONTH(data_expediente) = ? 

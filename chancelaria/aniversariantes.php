@@ -19,7 +19,7 @@ $meses = [
 
 try {
     // Busca os obreiros ativos
-    $stmt = $pdo->prepare("SELECT id, nome, data_nascimento, data_iniciacao, telefone, email 
+    $stmt = $pdo_read->prepare("SELECT id, nome, data_nascimento, data_iniciacao, telefone, email
                            FROM chancelaria_membros 
                            WHERE tenant_id = ? AND status = 'Ativo' 
                            ORDER BY nome ASC");

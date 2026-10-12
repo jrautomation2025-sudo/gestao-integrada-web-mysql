@@ -44,7 +44,7 @@ try {
     if ($publico === 'grupo') {
         
         // Busca o ID do grupo na tabela de usuários vinculada ao tenant_id
-        $stmtGrupo = $pdo->prepare("SELECT whatsapp_grupo_id, whatsapp_instance_id FROM usuarios WHERE id = ?");
+        $stmtGrupo = $pdo_read->prepare("SELECT whatsapp_grupo_id, whatsapp_instance_id FROM usuarios WHERE id = ?");
         $stmtGrupo->execute([$tenant_id]);
         $usuario = $stmtGrupo->fetch(PDO::FETCH_ASSOC);
 
@@ -72,13 +72,13 @@ try {
         $destinatarios = [];
 
         if ($publico === 'ativos') {
-            $stmt = $pdo->prepare("SELECT nome, telefone FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo' AND telefone IS NOT NULL AND telefone != ''");
+            $stmt = $pdo_read->prepare("SELECT nome, telefone FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo' AND telefone IS NOT NULL AND telefone != ''");
             $stmt->execute([$tenant_id]);
             $destinatarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         } elseif ($publico === 'faltosos') {
             if ($sessao_id <= 0) throw new Exception("Sessão não informada.");
-            $stmt = $pdo->prepare("
+            $stmt = $pdo_read->prepare("
                 SELECT m.nome, m.telefone 
                 FROM chancelaria_membros m
                 INNER JOIN chancelaria_presencas p ON m.id = p.membro_id
@@ -89,7 +89,7 @@ try {
 
         } elseif ($publico === 'visitantes') {
             if ($sessao_id <= 0) throw new Exception("Sessão não informada.");
-            $stmt = $pdo->prepare("SELECT nome, telefone FROM chancelaria_visitantes WHERE tenant_id = ? AND sessao_id = ? AND telefone IS NOT NULL AND telefone != ''");
+            $stmt = $pdo_read->prepare("SELECT nome, telefone FROM chancelaria_visitantes WHERE tenant_id = ? AND sessao_id = ? AND telefone IS NOT NULL AND telefone != ''");
             $stmt->execute([$tenant_id, $sessao_id]);
             $destinatarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }

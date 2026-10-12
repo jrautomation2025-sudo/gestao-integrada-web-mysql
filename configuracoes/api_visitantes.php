@@ -44,7 +44,7 @@ if ($metodo === 'GET' && $action === 'individual') {
 
     try {
         if ($sessao_id && $tenant_id && $cim) {
-            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, u.whatsapp_instance_id, u.whatsapp_token,
+            $stmt = $pdo_read->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, u.whatsapp_instance_id, u.whatsapp_token,
                                     (select nome from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as loja_visitada,
                                     (select url_logo from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as logo_loja,
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'secretario') as secretario,
@@ -76,7 +76,7 @@ elseif ($metodo === 'GET' && $action === 'todos') {
 
     try {
         if ($sessao_id) {
-            $stmt = $pdo->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, u.whatsapp_instance_id, u.whatsapp_token,
+            $stmt = $pdo_read->prepare("SELECT v.loja_origem, v.nome, v.grau, v.telefone, v.email, s.titulo, s.tipo, s.data_sessao, u.whatsapp_instance_id, u.whatsapp_token,
                                     (select nome from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as loja_visitada,
                                     (select url_logo from secretaria_lojas where id in (select loja_id from usuarios where id = v.tenant_id )) as logo_loja,
                                     (select nome from chancelaria_membros where tenant_id = v.tenant_id and cargo = 'secretario') as secretario,
@@ -90,12 +90,12 @@ elseif ($metodo === 'GET' && $action === 'todos') {
             $visitante = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode($visitante ?: ['erro' => 'Visitante não encontrado']);
         } elseif ($id) {
-            $stmt = $pdo->prepare("SELECT * FROM chancelaria_visitantes WHERE id = ?");
+            $stmt = $pdo_read->prepare("SELECT * FROM chancelaria_visitantes WHERE id = ?");
             $stmt->execute([$id]);
             $visitantes = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode($visitantes);
         } else {
-            $stmt = $pdo->query("SELECT * FROM chancelaria_visitantes");
+            $stmt = $pdo_read->query("SELECT * FROM chancelaria_visitantes");
             echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
         }
     } catch (Exception $e) {
@@ -121,7 +121,7 @@ elseif ($metodo === 'POST' || $metodo === 'PUT') {
     }
 
     try {
-        $stmt = $pdo->prepare("UPDATE chancelaria_visitantes SET telefone = ?, email = ? WHERE id = ?");
+        $stmt = $pdo_write->prepare("UPDATE chancelaria_visitantes SET telefone = ?, email = ? WHERE id = ?");
         $stmt->execute([$telefone, $email, $id]);
 
         echo json_encode([

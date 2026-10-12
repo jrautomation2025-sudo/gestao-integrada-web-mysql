@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     try {
         $sql = "UPDATE transacoes SET descricao = ?, tipo = ?, valor = ? WHERE id = ? AND usuario_id = ?";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         $resultado = $stmt->execute([$descricao, $tipo, $valor, $id, $user_id]);
 
         if ($resultado && $stmt->rowCount() > 0) {

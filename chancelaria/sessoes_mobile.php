@@ -16,7 +16,7 @@ if (!isset($_SESSION['chanceler_logado']) || empty($_SESSION['tenant_id'])) {
 // 2. Captura o ID do tenant/usuário logado na sessão atual
 $tenant_id = $_SESSION['tenant_id'] ?? $_SESSION['user_id'] ?? $_SESSION['user']['id']; 
 
-$stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+$stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
 $stmt->execute([$tenant_id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo'])) {
     $token_presenca = bin2hex(random_bytes(16));
 
     try {
-        $stmtInsert = $pdo->prepare("
+        $stmtInsert = $pdo_write->prepare("
             INSERT INTO chancelaria_sessoes (tenant_id, titulo, data_sessao, hora_sessao, grau, tipo, status, valor, token_presenca) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo'])) {
 }
 
 // 4. Consulta estritamente filtrada pelo tenant logado
-$stmtSessoes = $pdo->prepare("
+$stmtSessoes = $pdo_read->prepare("
     SELECT * FROM chancelaria_sessoes 
     WHERE tenant_id = ? AND status = 'Agendada'
     AND data_sessao >= DATE_FORMAT(CURDATE(), '%Y-%m-01') 
@@ -70,13 +70,13 @@ if (isset($_GET['sessao_id'])) {
     $sessao_id = $_GET['sessao_id'];
     
     // Pega dados da sessão escolhida
-    $stmtS = $pdo->prepare("SELECT * FROM chancelaria_sessoes WHERE id = ?");
+    $stmtS = $pdo_read->prepare("SELECT * FROM chancelaria_sessoes WHERE id = ?");
     $stmtS->execute([$sessao_id]);
     $sessao_ativa = $stmtS->fetch();
 
     if ($sessao_ativa) {
         // Membros presentes
-        $stmtM = $pdo->prepare("
+        $stmtM = $pdo_read->prepare("
             SELECT m.nome, m.cim, m.grau, p.created_at 
             FROM chancelaria_presencas p 
             JOIN chancelaria_membros m ON p.membro_id = m.id 
@@ -86,7 +86,7 @@ if (isset($_GET['sessao_id'])) {
         $presencas_membros = $stmtM->fetchAll(PDO::FETCH_ASSOC);
 
         // Visitantes presentes
-        $stmtV = $pdo->prepare("
+        $stmtV = $pdo_read->prepare("
             SELECT nome, cim, loja_origem, potencia, grau, telefone, email, created_at 
             FROM chancelaria_visitantes 
             WHERE sessao_id = ?

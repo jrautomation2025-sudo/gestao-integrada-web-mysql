@@ -24,22 +24,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $status = $_POST['status'];
         $recibo = intval($_POST['recibo']);
 
-        $stmt = $pdo->prepare("SELECT id FROM mensalidades WHERE cliente_id = ? AND ano = ? AND mes = ?");
+        $stmt = $pdo_read->prepare("SELECT id FROM mensalidades WHERE cliente_id = ? AND ano = ? AND mes = ?");
         $stmt->execute([$cliente_id, $ano, $mes]);
         $exist = $stmt->fetchColumn();
 
         if ($exist) {
-            $pdo->prepare("UPDATE mensalidades SET status = ?, recibo_enviado = ? WHERE id = ?")
+            $pdo_write->prepare("UPDATE mensalidades SET status = ?, recibo_enviado = ? WHERE id = ?")
                 ->execute([$status, $recibo, $exist]);
         } else {
-            $pdo->prepare("INSERT INTO mensalidades (cliente_id, ano, mes, status, recibo_enviado) VALUES (?, ?, ?, ?, ?)")
+            $pdo_write->prepare("INSERT INTO mensalidades (cliente_id, ano, mes, status, recibo_enviado) VALUES (?, ?, ?, ?, ?)")
                 ->execute([$cliente_id, $ano, $mes, $status, $recibo]);
         }
 
         // NOVO: Se o status alterado for 'OK', cria o registro automático na tabela de transações
         if ($status === 'OK') {
             // Busca o nome do membro e o valor da mensalidade dele
-            $stmtCli = $pdo->prepare("SELECT nome, valor_mensalidade FROM clientes WHERE id = ?");
+            $stmtCli = $pdo_read->prepare("SELECT nome, valor_mensalidade FROM clientes WHERE id = ?");
             $stmtCli->execute([$cliente_id]);
             $clienteInfo = $stmtCli->fetch(PDO::FETCH_ASSOC);
 
@@ -63,13 +63,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $tipoTransacao = 'mensalidade'; // ou Crédito, dependendo da estrutura da sua tabela de transações
 
                 // Insere na tabela transacoes (ajuste o nome das colunas caso sua tabela seja diferente, ex: usuario_id ou tenant_id)
-                $stmtTrans = $pdo->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, data_transacao, tipo) VALUES (?, ?, ?, ?, ?)");
+                $stmtTrans = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, data_transacao, tipo) VALUES (?, ?, ?, ?, ?)");
                 // Caso sua tabela use tenant_id em vez de usuario_id, substitua o primeiro parâmetro conforme sua base
                 try {
                     $stmtTrans->execute([$user_id, $descricaoTransacao, $valorMensalidade, $dataAtual, $tipoTransacao]);
                 } catch (Exception $ex) {
                     // Fallback caso a tabela transacoes tenha colunas com nomes ligeiramente diferentes
-                    $stmtTransAlt = $pdo->prepare("INSERT INTO transacoes (tenant_id, descricao, valor, data_transacao) VALUES (?, ?, ?, ?)");
+                    $stmtTransAlt = $pdo_write->prepare("INSERT INTO transacoes (tenant_id, descricao, valor, data_transacao) VALUES (?, ?, ?, ?)");
                     $stmtTransAlt->execute([$user_id, $descricaoTransacao, $valorMensalidade, $dataAtual]);
                 }
             }
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $valor = floatval(str_replace(',', '.', $valorStr)); 
         
         // UPDATE atualizado
-        $pdo->prepare("UPDATE clientes SET situacao = ?, recolhe = ?, valor_mensalidade = ?, duplo_filiado = ? WHERE id = ? AND usuario_id = ?")
+        $pdo_write->prepare("UPDATE clientes SET situacao = ?, recolhe = ?, valor_mensalidade = ?, duplo_filiado = ? WHERE id = ? AND usuario_id = ?")
             ->execute([$situacao, $recolhe, $valor, $duplo_filiado, $cliente_id, $user_id]);
         
         echo json_encode(['success' => true]);
@@ -111,7 +111,7 @@ $sql = "SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalid
         LEFT JOIN mensalidades m ON c.id = m.cliente_id AND m.ano = ?
         WHERE c.usuario_id = ?
         ORDER BY c.nome ASC, m.mes ASC";
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 $stmt->execute([$ano_filtro, $user_id]);
 $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -119,7 +119,7 @@ $resultados = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $sql = "SELECT nome
         FROM usuarios
         WHERE id = ?";
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 $stmt->execute([$user_id]);
 $loja = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -130,7 +130,7 @@ $sql = "SELECT nome
         FROM chancelaria_membros 
         WHERE tenant_id = ?
         AND cargo = 'tesoureiro'";
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 $stmt->execute([$user_id]);
 $membro = $stmt->fetch(PDO::FETCH_ASSOC);
 

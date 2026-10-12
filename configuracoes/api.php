@@ -295,7 +295,7 @@ if ($action === 'inv_add') {
             ->execute([$user_id, $cat, $ativo, $inv, $atu, $data, $ctx_salvar]);
         
         // 2. Gera a despesa (saída do caixa) também com o mesmo contexto
-        //$pdo->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, 'fixo', ?, ?, ?, ?)")
+        //$pdo_write->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, 'fixo', ?, ?, ?, ?)")
             //->execute([$user_id, "Aporte: $ativo", $inv, $data, $ctx_salvar]);
         
         $pdo_write->commit(); 
@@ -327,7 +327,7 @@ if ($action === 'inv_edit') {
             ->execute([$cat, $ativo, $inv, $atu, $data, $user_id, $id]);
         
         // 2. Gera a despesa (saída do caixa) também com o mesmo contexto
-        //$pdo->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, 'fixo', ?, ?, ?, ?)")
+        //$pdo_write->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, 'fixo', ?, ?, ?, ?)")
             //->execute([$user_id, "Aporte: $ativo", $inv, $data, $ctx_salvar]);
         
         $pdo_write->commit(); 

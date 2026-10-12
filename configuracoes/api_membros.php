@@ -43,7 +43,7 @@ if ($metodo === 'GET' && $action === 'recibo') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email, u.whatsapp_instance_id, u.whatsapp_token
+            $stmt = $pdo_read->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email, u.whatsapp_instance_id, u.whatsapp_token
                                         FROM clientes c
                                         LEFT JOIN mensalidades m ON c.id = m.cliente_id
                                         JOIN usuarios u ON c.usuario_id = u.id
@@ -74,7 +74,7 @@ elseif ($metodo === 'GET' && $action === 'recibo_individual') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email, u.whatsapp_instance_id, u.whatsapp_token
+            $stmt = $pdo_read->prepare("SELECT c.id, c.nome, c.telefone, c.email, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, l.nome AS loja_nome, l.url_logo AS loja_logo, l.endereco AS loja_endereco, l.email AS loja_email, u.whatsapp_instance_id, u.whatsapp_token
                                         FROM clientes c
                                         LEFT JOIN mensalidades m ON c.id = m.cliente_id
                                         JOIN usuarios u ON c.usuario_id = u.id
@@ -116,7 +116,7 @@ elseif ($metodo === 'GET' && $action === 'individual') {
                     AND m.status in ('NOK','Pendente')
                     LIMIT :parcela";
 
-            $stmt = $pdo->prepare($sql);
+            $stmt = $pdo_read->prepare($sql);
             
             // Fazemos o bind explícito, garantindo os tipos corretos
             $stmt->bindValue(':ano', $ano, PDO::PARAM_STR); 
@@ -147,7 +147,7 @@ elseif ($metodo === 'GET' && $action === 'membros') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id, u.whatsapp_instance_id, u.whatsapp_token
+            $stmt = $pdo_read->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id, u.whatsapp_instance_id, u.whatsapp_token
                                     FROM clientes c
                                     LEFT JOIN mensalidades m ON c.id = m.cliente_id
                                     JOIN usuarios u ON c.usuario_id = u.id
@@ -176,7 +176,7 @@ elseif ($metodo === 'GET' && $action === 'filiado') {
 
     try {
         if ($user_id && $mes) {
-            $stmt = $pdo->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id, u.whatsapp_instance_id, u.whatsapp_token
+            $stmt = $pdo_read->prepare("SELECT c.id, c.nome, c.telefone, c.situacao, c.recolhe, c.valor_mensalidade, m.mes, m.status, m.recibo_enviado, c.usuario_id, u.whatsapp_instance_id, u.whatsapp_token
                                     FROM clientes c
                                     LEFT JOIN mensalidades m ON c.id = m.cliente_id
                                     JOIN usuarios u ON c.usuario_id = u.id
@@ -215,7 +215,7 @@ elseif ($metodo === 'PUT' || $metodo === 'POST') {
 
     try {
         $sql = "UPDATE mensalidades SET recibo_enviado = '1' WHERE cliente_id = ? AND recibo_enviado = '0' AND status = 'OK'";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         $stmt->execute([$id]);
 
         echo json_encode([

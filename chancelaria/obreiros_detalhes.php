@@ -11,7 +11,7 @@ $tenant_id = $_SESSION['tenant_id'];
 $mensagem = "";
 
 // Busca todos os membros da loja para popular o select
-$stmtMembros = $pdo->prepare("SELECT id, nome FROM chancelaria_membros WHERE tenant_id = ? ORDER BY nome ASC");
+$stmtMembros = $pdo_read->prepare("SELECT id, nome FROM chancelaria_membros WHERE tenant_id = ? ORDER BY nome ASC");
 $stmtMembros->execute([$tenant_id]);
 $membros = $stmtMembros->fetchAll(PDO::FETCH_ASSOC);
 
@@ -20,7 +20,7 @@ $detalhes = [];
 
 // Se um membro foi escolhido, busca os dados detalhados dele (se existirem)
 if ($membro_selecionado) {
-    $stmtDet = $pdo->prepare("SELECT * FROM chancelaria_membros_detalhes WHERE membro_id = ?");
+    $stmtDet = $pdo_read->prepare("SELECT * FROM chancelaria_membros_detalhes WHERE membro_id = ?");
     $stmtDet->execute([$membro_selecionado]);
     $detalhes = $stmtDet->fetch(PDO::FETCH_ASSOC) ?: [];
 }
@@ -39,12 +39,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $telefone_extra = trim($_POST['telefone_extra']);
 
     // Verifica se já existe registro de detalhes para este membro
-    $stmtCheck = $pdo->prepare("SELECT id FROM chancelaria_membros_detalhes WHERE membro_id = ?");
+    $stmtCheck = $pdo_read->prepare("SELECT id FROM chancelaria_membros_detalhes WHERE membro_id = ?");
     $stmtCheck->execute([$membro_id]);
     
     if ($stmtCheck->rowCount() > 0) {
         // Atualiza
-        $stmtUp = $pdo->prepare("
+        $stmtUp = $pdo_write->prepare("
             UPDATE chancelaria_membros_detalhes 
             SET rg = ?, cpf = ?, cep = ?, endereco = ?, numero = ?, bairro = ?, cidade = ?, estado = ?, telefone_extra = ?
             WHERE membro_id = ?
@@ -52,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmtUp->execute([$rg, $cpf, $cep, $endereco, $numero, $bairro, $cidade, $estado, $telefone_extra, $membro_id]);
     } else {
         // Insere
-        $stmtIns = $pdo->prepare("
+        $stmtIns = $pdo_write->prepare("
             INSERT INTO chancelaria_membros_detalhes (membro_id, rg, cpf, cep, endereco, numero, bairro, cidade, estado, telefone_extra)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");

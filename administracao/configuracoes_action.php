@@ -26,7 +26,7 @@ $whatsapp_token = trim($dados['whatsapp_token'] ?? '');
 try {
     // Atualiza a tabela usuarios garantindo que o update ocorra apenas para o tenant logado
     $sql = "UPDATE usuarios SET whatsapp_grupo_id = ?, whatsapp_instance_id = ?, whatsapp_token = ? WHERE id = ?";
-    $stmt = $pdo->prepare($sql);
+    $stmt = $pdo_write->prepare($sql);
     $stmt->execute([$whatsapp_grupo_id, $whatsapp_instance_id, $whatsapp_token, $tenant_id]);
 
     echo json_encode(['sucesso' => true, 'mensagem' => 'Configurações salvas com sucesso!']);

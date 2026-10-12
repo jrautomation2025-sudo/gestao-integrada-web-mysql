@@ -17,7 +17,7 @@ $data_agora = date('Y-m-d H:i:s');
 // 3. REGISTRA O LOGOUT NO BANCO DE DADOS
 if ($usuario_id && $tenant_id && isset($pdo)) {
     try {
-        $stmt = $pdo->prepare("INSERT INTO logs_acesso (tenant_id, usuario_id, acao, ip, data_acesso) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $pdo_write->prepare("INSERT INTO logs_acesso (tenant_id, usuario_id, acao, ip, data_acesso) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$tenant_id, $usuario_id, 'logout', $ip_usuario, $data_agora]);
     } catch (PDOException $e) {
         // Ignora silenciosamente. Se falhar o log, o usuário ainda deve conseguir sair.

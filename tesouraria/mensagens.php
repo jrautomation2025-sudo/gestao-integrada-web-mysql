@@ -23,12 +23,12 @@ $user_id = $_SESSION['tenant_id'] ?? $_SESSION['user_id'] ?? $_SESSION['user']['
 $contexto = $_SESSION['contexto_atual'] ?? 'pessoal';
 
 // Busca os dados APENAS do usuário logado
-$stmt = $pdo->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :usuario_id");
+$stmt = $pdo_read->prepare("SELECT * FROM configuracoes_pix WHERE usuario_id = :usuario_id");
 $stmt->execute([':usuario_id' => $user_id]);
 $config = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Busca os dados APENAS do usuário logado
-$stmt = $pdo->prepare("SELECT id, nome FROM clientes WHERE usuario_id = :usuario_id order by nome asc");
+$stmt = $pdo_read->prepare("SELECT id, nome FROM clientes WHERE usuario_id = :usuario_id order by nome asc");
 $stmt->execute([':usuario_id' => $user_id]);
 $membros = $stmt->fetchAll(PDO::FETCH_ASSOC);
 

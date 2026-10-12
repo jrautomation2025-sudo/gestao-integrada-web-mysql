@@ -42,7 +42,7 @@ $telefone = preg_replace('/[^0-9]/', '', $input['telefone']);
 
 // 3. CHECK USER (MANTIDO IGUAL)
 if (isset($input['action']) && $input['action'] === 'check_user') {
-    $stmt = $pdo->prepare("SELECT id, nome, email, plano FROM usuarios WHERE telefone LIKE ? LIMIT 1");
+    $stmt = $pdo_read->prepare("SELECT id, nome, email, plano FROM usuarios WHERE telefone LIKE ? LIMIT 1");
     $stmt->execute(["%{$telefone}%"]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -84,7 +84,7 @@ if ($raw_tipo === 'receita') {
 }
 
 try {
-    $stmtUser = $pdo->prepare("SELECT id, nome, plano FROM usuarios WHERE telefone LIKE ? LIMIT 1");
+    $stmtUser = $pdo_read->prepare("SELECT id, nome, plano FROM usuarios WHERE telefone LIKE ? LIMIT 1");
     $stmtUser->execute(["%{$telefone}%"]);
     $user = $stmtUser->fetch(PDO::FETCH_ASSOC);
 
@@ -102,7 +102,7 @@ try {
     }
 
     $sql = "INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, contexto) VALUES (?, ?, ?, ?, ?, ?)";
-    $stmtInsert = $pdo->prepare($sql);
+    $stmtInsert = $pdo_write->prepare($sql);
     
     if ($stmtInsert->execute([$user['id'], $descricao, $valor, $tipo, $data, $contexto])) {
         echo json_encode([

@@ -19,7 +19,7 @@ $sql_meses = "SELECT DISTINCT DATE_FORMAT(data_transacao, '%Y-%m') as mes_ano
               FROM transacoes 
               WHERE usuario_id = ? AND contexto = ? 
               ORDER BY mes_ano DESC";
-$stmt_meses = $pdo->prepare($sql_meses);
+$stmt_meses = $pdo_read->prepare($sql_meses);
 $stmt_meses->execute([$user_id, $contexto]);
 $meses_disponiveis = $stmt_meses->fetchAll(PDO::FETCH_COLUMN);
 
@@ -44,7 +44,7 @@ $sql = "SELECT id, data_transacao, descricao, tipo, valor
         AND MONTH(data_transacao) = ? 
         AND YEAR(data_transacao) = ? 
         ORDER BY data_transacao ASC";
-$stmt = $pdo->prepare($sql);
+$stmt = $pdo_read->prepare($sql);
 $stmt->execute([$user_id, $contexto, $mes, $ano]);
 $transacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>

@@ -13,12 +13,12 @@ if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
 $tenant_id = $_SESSION['tenant_id']; // Em produção, virá da $_SESSION['tenant_id']
 
 // 1. Busca Acompanhamentos Ativos
-$stmt1 = $pdo->prepare("SELECT COUNT(*) as total FROM hospitalaria_acompanhamentos WHERE tenant_id = :tenant_id AND status = 'Em Acompanhamento'");
+$stmt1 = $pdo_read->prepare("SELECT COUNT(*) as total FROM hospitalaria_acompanhamentos WHERE tenant_id = :tenant_id AND status = 'Em Acompanhamento'");
 $stmt1->execute([':tenant_id' => $tenant_id]);
 $acompanhamentos_ativos = $stmt1->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
 // 2. Calcula Saldo do Tronco (Entradas - Saídas)
-$stmt2 = $pdo->prepare("
+$stmt2 = $pdo_read->prepare("
     SELECT 
         SUM(CASE WHEN tipo = 'Entrada' THEN valor ELSE 0 END) as total_entradas,
         SUM(CASE WHEN tipo = 'Saída' THEN valor ELSE 0 END) as total_saidas
@@ -32,19 +32,19 @@ $total_entradas = $financeiro['total_entradas'] ?? 0;
 $total_saidas = $financeiro['total_saidas'] ?? 0;
 $saldo_atual = $total_entradas - $total_saidas;
 
-$stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+$stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
 $stmt->execute([$tenant_id]);
 $meuPerfil = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // 3. Dados para o Gráfico (Evolução mensal)
-$stmt_chart = $pdo->prepare("SELECT MONTH(data_inicio) as mes, COUNT(*) as total FROM hospitalaria_acompanhamentos WHERE tenant_id = :tenant_id AND YEAR(data_inicio) = YEAR(CURDATE()) GROUP BY MONTH(data_inicio)");
+$stmt_chart = $pdo_read->prepare("SELECT MONTH(data_inicio) as mes, COUNT(*) as total FROM hospitalaria_acompanhamentos WHERE tenant_id = :tenant_id AND YEAR(data_inicio) = YEAR(CURDATE()) GROUP BY MONTH(data_inicio)");
 $stmt_chart->execute([':tenant_id' => $tenant_id]);
 $dados_meses = $stmt_chart->fetchAll(PDO::FETCH_ASSOC);
 $chart_data = array_fill(1, 12, 0);
 foreach($dados_meses as $d) { $chart_data[$d['mes']] = $d['total']; }
 
 // 4. Últimos 5 Lançamentos Financeiros
-$stmt_list = $pdo->prepare("SELECT * FROM hospitalaria_beneficencia WHERE tenant_id = ? ORDER BY id DESC LIMIT 5");
+$stmt_list = $pdo_read->prepare("SELECT * FROM hospitalaria_beneficencia WHERE tenant_id = ? ORDER BY id DESC LIMIT 5");
 $stmt_list->execute([$tenant_id]);
 $ultimos_lancamentos = $stmt_list->fetchAll(PDO::FETCH_ASSOC);
 ?>

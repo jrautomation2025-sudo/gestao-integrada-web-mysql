@@ -12,7 +12,7 @@ $tenant_id = $_SESSION['tenant_id'];
 
 try {
     // Busca as sessões para o caso de mensagens para Faltosos ou Visitantes
-    $stmtSessoes = $pdo->prepare("SELECT id, data_sessao, tipo FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY data_sessao DESC LIMIT 20");
+    $stmtSessoes = $pdo_read->prepare("SELECT id, data_sessao, tipo FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY data_sessao DESC LIMIT 20");
     $stmtSessoes->execute([$tenant_id]);
     $sessoes = $stmtSessoes->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

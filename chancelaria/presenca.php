@@ -14,12 +14,12 @@ $sessao_id = isset($_GET['sessao_id']) ? (int)$_GET['sessao_id'] : 0;
 
 try {
     // 1. Busca todas as sessões da Loja para o Select
-    $stmtSessoes = $pdo->prepare("SELECT id, data_sessao, tipo, grau FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY data_sessao DESC");
+    $stmtSessoes = $pdo_read->prepare("SELECT id, data_sessao, tipo, grau FROM chancelaria_sessoes WHERE tenant_id = ? ORDER BY data_sessao DESC");
     $stmtSessoes->execute([$tenant_id]);
     $sessoes = $stmtSessoes->fetchAll(PDO::FETCH_ASSOC);
 
     // 2. Busca todos os membros ativos para popular o Modal de adição
-    $stmtTodos = $pdo->prepare("SELECT id, nome, cim FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo' ORDER BY nome ASC");
+    $stmtTodos = $pdo_read->prepare("SELECT id, nome, cim FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo' ORDER BY nome ASC");
     $stmtTodos->execute([$tenant_id]);
     $todosMembros = $stmtTodos->fetchAll(PDO::FETCH_ASSOC);
 
@@ -29,12 +29,12 @@ try {
     $visitantes = [];
     
     if ($sessao_id > 0) {
-        $stmtSessaoInfo = $pdo->prepare("SELECT * FROM chancelaria_sessoes WHERE id = ? AND tenant_id = ?");
+        $stmtSessaoInfo = $pdo_read->prepare("SELECT * FROM chancelaria_sessoes WHERE id = ? AND tenant_id = ?");
         $stmtSessaoInfo->execute([$sessao_id, $tenant_id]);
         $sessaoAtual = $stmtSessaoInfo->fetch(PDO::FETCH_ASSOC);
 
         // Obreiros presentes do quadro
-        $stmtPresentes = $pdo->prepare("
+        $stmtPresentes = $pdo_read->prepare("
             SELECT m.id as membro_id, m.cim, m.nome, m.grau, p.status_presenca 
             FROM chancelaria_membros m
             INNER JOIN chancelaria_presencas p ON m.id = p.membro_id 
@@ -47,7 +47,7 @@ try {
         $presentes = $stmtPresentes->fetchAll(PDO::FETCH_ASSOC);
 
         // Visitantes presentes na sessão
-        $stmtVisitantes = $pdo->prepare("
+        $stmtVisitantes = $pdo_read->prepare("
             SELECT * FROM chancelaria_visitantes 
             WHERE sessao_id = ? 
             ORDER BY nome ASC

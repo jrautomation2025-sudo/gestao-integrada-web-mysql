@@ -13,28 +13,28 @@ try {
     // ---------------------------------------------------------
     
     // 1. Total de Obreiros
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo'");
+    $stmt = $pdo_read->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo'");
     $stmt->execute([$tenant_id]);
     $total_obreiros = $stmt->fetchColumn();
     
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo' AND presenca = 'isento'");
+    $stmt = $pdo_read->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND status = 'Ativo' AND presenca = 'isento'");
     $stmt->execute([$tenant_id]);
     $total_obreiros_isentos = $stmt->fetchColumn();
     
     $total_obreiros_percentual = $total_obreiros - $total_obreiros_isentos;
 
     // 2. Sessões Realizadas no Ano
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND YEAR(data_sessao) = YEAR(CURDATE()) AND data_sessao <= CURDATE() AND status != 'Cancelada'");
+    $stmt = $pdo_read->prepare("SELECT COUNT(*) FROM chancelaria_sessoes WHERE tenant_id = ? AND YEAR(data_sessao) = YEAR(CURDATE()) AND data_sessao <= CURDATE() AND status != 'Cancelada'");
     $stmt->execute([$tenant_id]);
     $sessoes_ano = $stmt->fetchColumn();
 
     // 3. Aniversariantes do Mês
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND MONTH(data_nascimento) = MONTH(CURDATE())");
+    $stmt = $pdo_read->prepare("SELECT COUNT(*) FROM chancelaria_membros WHERE tenant_id = ? AND MONTH(data_nascimento) = MONTH(CURDATE())");
     $stmt->execute([$tenant_id]);
     $aniversariantes_mes = $stmt->fetchColumn();
 
     // 4. Média de Frequência Geral (Considerando o total de obreiros ativos da loja)
-    $stmt = $pdo->prepare("
+    $stmt = $pdo_read->prepare("
         SELECT AVG(freq_sessao) as media_geral FROM (
             SELECT 
                 cs.id,
@@ -54,21 +54,21 @@ try {
     // ---------------------------------------------------------
 
     // 5. Próxima Sessão Agendada
-    $stmt = $pdo->prepare("SELECT tipo, data_sessao, grau, titulo FROM chancelaria_sessoes WHERE tenant_id = ? AND data_sessao >= CURDATE() ORDER BY data_sessao ASC LIMIT 1");
+    $stmt = $pdo_read->prepare("SELECT tipo, data_sessao, grau, titulo FROM chancelaria_sessoes WHERE tenant_id = ? AND data_sessao >= CURDATE() ORDER BY data_sessao ASC LIMIT 1");
     $stmt->execute([$tenant_id]);
     $proxima_sessao = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // 6. Últimas 4 Sessões Realizadas
-    $stmt = $pdo->prepare("SELECT id, tipo, data_sessao, grau, status FROM chancelaria_sessoes WHERE tenant_id = ? AND data_sessao < CURDATE() ORDER BY data_sessao DESC LIMIT 4");
+    $stmt = $pdo_read->prepare("SELECT id, tipo, data_sessao, grau, status FROM chancelaria_sessoes WHERE tenant_id = ? AND data_sessao < CURDATE() ORDER BY data_sessao DESC LIMIT 4");
     $stmt->execute([$tenant_id]);
     $ultimas_sessoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
+    $stmt = $pdo_read->prepare("SELECT * FROM usuarios WHERE id = ?");
     $stmt->execute([$tenant_id]);
     $meuPerfil = $stmt->fetch(PDO::FETCH_ASSOC);
     
     // 7. Evolução da Frequência por Mês (Baseada no Total de Obreiros Ativos)
-    $stmt = $pdo->prepare("
+    $stmt = $pdo_read->prepare("
         SELECT 
             mes_num,
             AVG(freq_sessao) as media_mes

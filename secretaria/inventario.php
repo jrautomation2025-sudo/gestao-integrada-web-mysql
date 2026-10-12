@@ -24,7 +24,7 @@ if (isset($_GET['acao']) && $_GET['acao'] === 'proximo_codigo') {
     header('Content-Type: application/json; charset=utf-8');
     try {
         // Busca o último ID cadastrado para este tenant
-        $stmt = $pdo->prepare("SELECT id FROM secretaria_inventario WHERE tenant_id = ? ORDER BY id DESC LIMIT 1");
+        $stmt = $pdo_read->prepare("SELECT id FROM secretaria_inventario WHERE tenant_id = ? ORDER BY id DESC LIMIT 1");
         $stmt->execute([$tenant_id]);
         $ultimoId = $stmt->fetchColumn() ?: 0;
         
@@ -33,7 +33,7 @@ if (isset($_GET['acao']) && $_GET['acao'] === 'proximo_codigo') {
         $codigoGerado = 'PAT-' . str_pad($proximoNum, 3, '0', STR_PAD_LEFT);
         
         // Garante unicidade caso já exista por algum motivo
-        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM secretaria_inventario WHERE tenant_id = ? AND codigo_patrimonio = ?");
+        $stmtCheck = $pdo_read->prepare("SELECT COUNT(*) FROM secretaria_inventario WHERE tenant_id = ? AND codigo_patrimonio = ?");
         $stmtCheck->execute([$tenant_id, $codigoGerado]);
         if ($stmtCheck->fetchColumn() > 0) {
             $codigoGerado = 'PAT-' . time(); // Fallback único com timestamp se houver conflito
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nome_item'])) {
 
     // Se o código de patrimônio veio vazio (caso o usuário tente burlar o HTML), geramos automaticamente
     if (empty($codigo)) {
-        $stmtUlt = $pdo->prepare("SELECT id FROM secretaria_inventario WHERE tenant_id = ? ORDER BY id DESC LIMIT 1");
+        $stmtUlt = $pdo_read->prepare("SELECT id FROM secretaria_inventario WHERE tenant_id = ? ORDER BY id DESC LIMIT 1");
         $stmtUlt->execute([$tenant_id]);
         $codigo = 'PAT-' . str_pad(($stmtUlt->fetchColumn() ?: 0) + 1, 3, '0', STR_PAD_LEFT);
     }
@@ -68,12 +68,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nome_item'])) {
         try {
             if (!empty($id)) {
                 // Atualizar
-                $stmt = $pdo->prepare("UPDATE secretaria_inventario SET codigo_patrimonio = ?, nome = ?, categoria = ?, quantidade = ?, estado_conservacao = ?, data_aquisicao = ?, observacoes = ? WHERE id = ? AND tenant_id = ?");
+                $stmt = $pdo_write->prepare("UPDATE secretaria_inventario SET codigo_patrimonio = ?, nome = ?, categoria = ?, quantidade = ?, estado_conservacao = ?, data_aquisicao = ?, observacoes = ? WHERE id = ? AND tenant_id = ?");
                 $stmt->execute([$codigo, $nome, $categoria, $quantidade, $estado, $data_aquisicao, $observacoes, $id, $tenant_id]);
                 $_SESSION['mensagem'] = "Item atualizado com sucesso!";
             } else {
                 // Inserir
-                $stmt = $pdo->prepare("INSERT INTO secretaria_inventario (tenant_id, codigo_patrimonio, nome, categoria, quantidade, estado_conservacao, data_aquisicao, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO secretaria_inventario (tenant_id, codigo_patrimonio, nome, categoria, quantidade, estado_conservacao, data_aquisicao, observacoes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$tenant_id, $codigo, $nome, $categoria, $quantidade, $estado, $data_aquisicao, $observacoes]);
                 $_SESSION['mensagem'] = "Item adicionado ao inventário!";
             }
@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nome_item'])) {
 if (isset($_GET['excluir'])) {
     $idExcluir = $_GET['excluir'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM secretaria_inventario WHERE id = ? AND tenant_id = ?");
+        $stmt = $pdo_write->prepare("DELETE FROM secretaria_inventario WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$idExcluir, $tenant_id]);
         $_SESSION['mensagem'] = "Item removido do inventário!";
     } catch (PDOException $e) {
@@ -124,7 +124,7 @@ try {
 
     $sql .= " ORDER BY nome ASC";
     
-    $stmt = $pdo->prepare($sql);
+    $stmt = $pdo_read->prepare($sql);
     $stmt->execute($params);
     $inventario = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {

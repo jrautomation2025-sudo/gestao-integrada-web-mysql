@@ -27,20 +27,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo'])) {
 
     if (!empty($titulo) && !empty($data_sessao)) {
         try {
-            $pdo->beginTransaction();
+            $pdo_write->beginTransaction();
 
             if (!empty($id)) {
                 // Atualizar Sessão
-                $stmt = $pdo->prepare("UPDATE chancelaria_sessoes SET titulo = ?, data_sessao = ?, hora_sessao = ?, tipo = ?, grau = ?, status = ?, valor = ? WHERE id = ? AND tenant_id = ?");
+                $stmt = $pdo_write->prepare("UPDATE chancelaria_sessoes SET titulo = ?, data_sessao = ?, hora_sessao = ?, tipo = ?, grau = ?, status = ?, valor = ? WHERE id = ? AND tenant_id = ?");
                 $stmt->execute([$titulo, $data_sessao, $hora_sessao, $tipo, $grau, $status, $valor, $id, $tenant_id]);
                 $_SESSION['mensagem'] = "Sessão atualizada com sucesso!";
             } else {
                 // Inserir Sessão
-                $stmt = $pdo->prepare("INSERT INTO chancelaria_sessoes (tenant_id, titulo, data_sessao, hora_sessao, tipo, grau, status, valor, token_presenca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo_write->prepare("INSERT INTO chancelaria_sessoes (tenant_id, titulo, data_sessao, hora_sessao, tipo, grau, status, valor, token_presenca) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([$tenant_id, $titulo, $data_sessao, $hora_sessao, $tipo, $grau, $status, $valor, $token_presenca]);
                 
                 // Recupera o ID da sessão recém-criada
-                $sessao_id = $pdo->lastInsertId();
+                $sessao_id = $pdo_write->lastInsertId();
 
                 // Lógica para adicionar justificativa automática baseada no Grau da Sessão
                 $grausPermitidosParaJustificar = [];
@@ -63,12 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo'])) {
                     $sqlMembros = "SELECT id FROM chancelaria_membros WHERE tenant_id = ? AND grau IN ($placeholders)";
                     
                     $paramsMembros = array_merge([$tenant_id], $grausPermitidosParaJustificar);
-                    $stmtMembros = $pdo->prepare($sqlMembros);
+                    $stmtMembros = $pdo_write->prepare($sqlMembros);
                     $stmtMembros->execute($paramsMembros);
                     $membrosInativeis = $stmtMembros->fetchAll(PDO::FETCH_ASSOC);
 
                     // Insere o registro de justificativa na tabela chancelaria_presencas para cada membro
-                    $stmtPresenca = $pdo->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca, justificativa, created_at) VALUES (?, ?, ?, 'J', ?, NOW())");
+                    $stmtPresenca = $pdo_write->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca, justificativa, created_at) VALUES (?, ?, ?, 'J', ?, NOW())");
 
                     foreach ($membrosInativeis as $membro) {
                         $textoJustificativa = "Ausência automática: Grau incompatível com a sessão (" . $grau . "º Grau).";
@@ -79,9 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo'])) {
                 $_SESSION['mensagem'] = "Sessão cadastrada e justificativas aplicadas com sucesso!";
             }
 
-            $pdo->commit();
+            $pdo_write->commit();
         } catch (PDOException $e) {
-            $pdo->rollBack();
+            $pdo_write->rollBack();
             $_SESSION['erro'] = "Erro ao salvar no banco de dados: " . $e->getMessage();
         }
     } else {
@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['titulo'])) {
 if (isset($_GET['excluir'])) {
     $idExcluir = $_GET['excluir'];
     try {
-        $stmt = $pdo->prepare("DELETE FROM chancelaria_sessoes WHERE id = ? AND tenant_id = ?");
+        $stmt = $pdo_write->prepare("DELETE FROM chancelaria_sessoes WHERE id = ? AND tenant_id = ?");
         $stmt->execute([$idExcluir, $tenant_id]);
         $_SESSION['mensagem'] = "Sessão excluída com sucesso!";
     } catch (PDOException $e) {
@@ -113,7 +113,7 @@ $filtro_ano = isset($_GET['ano']) && $_GET['ano'] !== '' ? $_GET['ano'] : date('
 // Busca as sessões cadastradas aplicando o filtro de Mês e Ano
 $sessoes = [];
 try {
-    $stmt = $pdo->prepare("
+    $stmt = $pdo_read->prepare("
         SELECT * FROM chancelaria_sessoes 
         WHERE tenant_id = ? 
         AND MONTH(data_sessao) = ? 

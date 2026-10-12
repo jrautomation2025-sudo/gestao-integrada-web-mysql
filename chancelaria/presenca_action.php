@@ -32,7 +32,7 @@ if ($sessao_id === 0 || $membro_id === 0) {
 try {
     if ($acao === 'remover') {
         // Se a ação for remover, apaga a presença especificamente DESTE membro NESTA sessão
-        $stmtDel = $pdo->prepare("DELETE FROM chancelaria_presencas WHERE tenant_id = ? AND sessao_id = ? AND membro_id = ?");
+        $stmtDel = $pdo_write->prepare("DELETE FROM chancelaria_presencas WHERE tenant_id = ? AND sessao_id = ? AND membro_id = ?");
         $stmtDel->execute([$tenant_id, $sessao_id, $membro_id]);
         
         echo json_encode(['sucesso' => true]);
@@ -41,7 +41,7 @@ try {
         // Ação de ADICIONAR (Vinda do Modal)
         
         // 1. Verifica se o obreiro já está registrado para não gerar o erro "Duplicate entry 1062"
-        $stmtCheck = $pdo->prepare("SELECT id FROM chancelaria_presencas WHERE tenant_id = ? AND sessao_id = ? AND membro_id = ?");
+        $stmtCheck = $pdo_read->prepare("SELECT id FROM chancelaria_presencas WHERE tenant_id = ? AND sessao_id = ? AND membro_id = ?");
         $stmtCheck->execute([$tenant_id, $sessao_id, $membro_id]);
         
         if ($stmtCheck->rowCount() > 0) {
@@ -51,7 +51,7 @@ try {
         }
 
         // 2. Se não tem, insere a presença
-        $stmtIns = $pdo->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca) VALUES (?, ?, ?, ?)");
+        $stmtIns = $pdo_write->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca) VALUES (?, ?, ?, ?)");
         $stmtIns->execute([$tenant_id, $sessao_id, $membro_id, $status]);
 
         echo json_encode(['sucesso' => true]);
