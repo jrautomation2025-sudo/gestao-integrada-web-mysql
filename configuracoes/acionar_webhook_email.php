@@ -10,7 +10,7 @@ require_once 'webhook_helper_email.php';
 
 $id = $_SESSION['tenant_id'];
 
-$stmt = $pdo->prepare("SELECT nome FROM usuarios WHERE id = ?");
+$stmt = $pdo_read->prepare("SELECT nome FROM usuarios WHERE id = ?");
 $stmt->execute([$id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
