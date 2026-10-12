@@ -83,6 +83,14 @@ if (isset($_GET['sessao_id'])) {
             WHERE p.sessao_id = ? AND p.tenant_id = ?
             AND p.status_presenca = 'P'
             AND (p.justificativa IS NULL OR TRIM(p.justificativa) = '')
+            AND NOT EXISTS (
+                SELECT 1
+                FROM chancelaria_presencas pj
+                WHERE pj.tenant_id = p.tenant_id
+                  AND pj.sessao_id = p.sessao_id
+                  AND pj.membro_id = p.membro_id
+                  AND pj.status_presenca IN ('J', 'Justificado')
+            )
         ");
         $stmtM->execute([$sessao_id, $tenant_id_logado]);
         $presencas_membros = $stmtM->fetchAll(PDO::FETCH_ASSOC);
