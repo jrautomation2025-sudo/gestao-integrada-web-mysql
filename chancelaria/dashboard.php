@@ -5,7 +5,12 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once '../configuracoes/config.php'; // Ajuste o caminho se necessário
 
-$tenant_id = $_SESSION['tenant_id']; // Em produção, virá da $_SESSION['tenant_id']
+if (empty($_SESSION['tenant_id']) && empty($_SESSION['user_id']) && empty($_SESSION['user']['id'])) {
+    header('Location: login.php');
+    exit;
+}
+
+$tenant_id = $_SESSION['tenant_id'] ?? $_SESSION['user_id'] ?? $_SESSION['user']['id'];
 
 try {
     // ---------------------------------------------------------
@@ -185,7 +190,7 @@ $meses = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho
         <div class="page-header">
             <div class="greeting">
                 <h2 style="font-family: 'Cinzel', serif; font-weight: 700; color: white; font-size: 1.8rem;"> Olá, Chanceler!</h2>
-                <span class="badge-pro"><i class="fas fa-gem me-1"></i> Loja Ativa <?php echo htmlspecialchars($meuPerfil['nome']); ?> </span>
+                <span class="badge-pro"><i class="fas fa-gem me-1"></i> Loja Ativa <?php echo htmlspecialchars((string)($meuPerfil['nome'] ?? $_SESSION['user']['nome'] ?? ''), ENT_QUOTES, 'UTF-8'); ?> </span>
             </div>
         </div>
 
