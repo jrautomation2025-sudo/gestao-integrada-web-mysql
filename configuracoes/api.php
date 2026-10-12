@@ -42,13 +42,13 @@ if ($action === 'add_remote') {
     // Webhooks externos salvam sempre como PESSOAL por padrão (ou mude aqui se quiser)
     $ctx_remote = 'pessoal'; 
 
-    $u = $pdo->prepare("SELECT id FROM usuarios WHERE telefone = ?");
+    $u = $pdo_read->prepare("SELECT id FROM usuarios WHERE telefone = ?");
     $u->execute([$tel]);
     $user = $u->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) { echo json_encode(['error' => 'User not found']); exit; }
 
-    $pdo->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, ?, ?, ?, ?, ?)")
+    $pdo_write->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, ?, ?, ?, ?, ?)")
         ->execute([$user['id'], $tipo, $desc, $val, $data, $ctx_remote]);
     
     echo json_encode(['status' => 'success']); exit;
@@ -62,14 +62,14 @@ if ($action === 'ai_report') {
     $tel = preg_replace('/[^0-9]/', '', $input['telefone'] ?? $_GET['telefone'] ?? '');
     $mes = $input['mes'] ?? $_GET['mes'] ?? date('Y-m');
     
-    $u = $pdo->prepare("SELECT id FROM usuarios WHERE telefone = ?");
+    $u = $pdo_read->prepare("SELECT id FROM usuarios WHERE telefone = ?");
     $u->execute([$tel]);
     $user = $u->fetch(PDO::FETCH_ASSOC);
     if (!$user) { echo json_encode(['error' => 'User not found']); exit; }
 
     // IA vê tudo (soma pessoal + empresa) ou filtra? Aqui deixei somando tudo por enquanto.
     $sql = "SELECT SUM(CASE WHEN tipo in ('receita','saldo') THEN valor ELSE 0 END) as rec, SUM(CASE WHEN tipo not in ('receita','saldo') THEN valor ELSE 0 END) as desp FROM transacoes WHERE usuario_id=? AND DATE_FORMAT(data_transacao, '%Y-%m')=?";
-    $st = $pdo->prepare($sql); $st->execute([$user['id'], $mes]);
+    $st = $pdo_read->prepare($sql); $st->execute([$user['id'], $mes]);
     $tot = $st->fetch(PDO::FETCH_ASSOC);
 
     echo json_encode(['financeiro' => ['receitas'=>$tot['rec'], 'despesas'=>$tot['desp'], 'saldo'=>$tot['rec']-$tot['desp']]]);
@@ -80,11 +80,11 @@ if ($action === 'inv_report_remote') {
     $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? '';
     if ($apiKey !== API_SECRET) { http_response_code(403); echo json_encode(['error' => 'API Key inválida']); exit; }
     $tel = preg_replace('/[^0-9]/', '', $input['telefone'] ?? $_GET['telefone'] ?? '');
-    $u = $pdo->prepare("SELECT id FROM usuarios WHERE telefone = ?");
+    $u = $pdo_read->prepare("SELECT id FROM usuarios WHERE telefone = ?");
     $u->execute([$tel]);
     $user = $u->fetch(PDO::FETCH_ASSOC);
     if (!$user) { echo json_encode(['error' => 'User not found']); exit; }
-    $st = $pdo->prepare("SELECT SUM(valor_investido) as inv, SUM(valor_atual) as atu FROM investimentos WHERE usuario_id=?");
+    $st = $pdo_read->prepare("SELECT SUM(valor_investido) as inv, SUM(valor_atual) as atu FROM investimentos WHERE usuario_id=?");
     $st->execute([$user['id']]);
     $res = $st->fetch(PDO::FETCH_ASSOC);
     echo json_encode(['resumo' => ['investido'=>$res['inv'], 'atual'=>$res['atu']]]);
@@ -143,7 +143,7 @@ if (!$user_id && $action !== 'login_api' && $action !== 'refresh_token') {
 
 // LISTA: AGORA FILTRA PELO CONTEXTO
 if ($action === 'list') {
-    $stmt = $pdo->prepare("SELECT * FROM transacoes WHERE usuario_id = ? AND contexto = ? ORDER BY data_transacao DESC LIMIT 10");
+    $stmt = $pdo_read->prepare("SELECT * FROM transacoes WHERE usuario_id = ? AND contexto = ? ORDER BY data_transacao DESC LIMIT 10");
     $stmt->execute([$user_id, $contexto]);
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
     exit;
@@ -151,7 +151,7 @@ if ($action === 'list') {
 
 // RESUMO: AGORA FILTRA PELO CONTEXTO
 if ($action === 'summary') {
-    $stmt = $pdo->prepare("SELECT SUM(CASE WHEN tipo in('receita','mensalidade','saldo','tronco') THEN valor ELSE 0 END) as receitas, SUM(CASE WHEN tipo='fixo' THEN valor ELSE 0 END) as fixo, SUM(CASE WHEN tipo='variavel' THEN valor ELSE 0 END) as variavel FROM transacoes WHERE usuario_id = ? AND contexto = ?");
+    $stmt = $pdo_read->prepare("SELECT SUM(CASE WHEN tipo in('receita','mensalidade','saldo','tronco') THEN valor ELSE 0 END) as receitas, SUM(CASE WHEN tipo='fixo' THEN valor ELSE 0 END) as fixo, SUM(CASE WHEN tipo='variavel' THEN valor ELSE 0 END) as variavel FROM transacoes WHERE usuario_id = ? AND contexto = ?");
     $stmt->execute([$user_id, $contexto]);
     $d = $stmt->fetch(PDO::FETCH_ASSOC);
     echo json_encode([
@@ -175,7 +175,7 @@ if ($action === 'add') {
     $ctx_salvar = $input['contexto'] ?? $_POST['contexto'] ?? $contexto;
 
     // 1. Verifica o Plano e Créditos
-    $stmtU = $pdo->prepare("SELECT plano, creditos_ia, plano_expiracao, telefone FROM usuarios WHERE id = ?");
+    $stmtU = $pdo_read->prepare("SELECT plano, creditos_ia, plano_expiracao, telefone FROM usuarios WHERE id = ?");
     $stmtU->execute([$user_id]);
     $uData = $stmtU->fetch(PDO::FETCH_ASSOC);
 
@@ -195,14 +195,14 @@ if ($action === 'add') {
     }
 
     // 2. Salva no Banco (COM CONTEXTO)
-    $stmt = $pdo->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, ?, ?, ?, ?, ?)");
     if ($stmt->execute([$user_id, $tipo, $desc, $valor, $data, $ctx_salvar])) {
         
         // 3. IA (Mantido igual)
         if ($usarIA) {
             $ehAssinante = ($plano == 'vitalicio') || (strpos($plano, 'pro') !== false && $validade && new DateTime($validade) > $hoje);
             if (!$ehAssinante) {
-                $pdo->prepare("UPDATE usuarios SET creditos_ia = creditos_ia - 1 WHERE id = ?")->execute([$user_id]);
+                $pdo_write->prepare("UPDATE usuarios SET creditos_ia = creditos_ia - 1 WHERE id = ?")->execute([$user_id]);
             }
         }
         
@@ -216,7 +216,7 @@ if ($action === 'add') {
 // GRÁFICO: AGORA FILTRA PELO CONTEXTO
 if ($action === 'chart_data') {
     $sql = "SELECT DATE_FORMAT(data_transacao, '%Y-%m') as mes_ano, SUM(CASE WHEN tipo in ('receita','saldo','mensalidade','tronco') THEN valor ELSE 0 END) as receita, SUM(CASE WHEN tipo not in ('receita','saldo','mensalidade','tronco') THEN valor ELSE 0 END) as despesa FROM transacoes WHERE usuario_id = ? AND contexto = ? AND data_transacao >= DATE_SUB(NOW(), INTERVAL 12 MONTH) GROUP BY mes_ano ORDER BY mes_ano ASC";
-    $stmt = $pdo->prepare($sql);
+    $stmt = $pdo_read->prepare($sql);
     $stmt->execute([$user_id, $contexto]);
     $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $l=[]; $r=[]; $d=[];
@@ -240,7 +240,7 @@ if ($action === 'chart_data') {
 
 // LISTA
 if ($action === 'inv_list') {
-    $stmt = $pdo->prepare("SELECT * FROM investimentos WHERE usuario_id = ? AND contexto = ? ORDER BY valor_atual DESC");
+    $stmt = $pdo_read->prepare("SELECT * FROM investimentos WHERE usuario_id = ? AND contexto = ? ORDER BY valor_atual DESC");
     $stmt->execute([$user_id, $contexto]);
     echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
     exit;
@@ -248,7 +248,7 @@ if ($action === 'inv_list') {
 
 // RESUMO
 if ($action === 'inv_summary') {
-    $stmt = $pdo->prepare("SELECT SUM(valor_investido) as inv, SUM(valor_atual) as atu FROM investimentos WHERE usuario_id = ? AND contexto = ?");
+    $stmt = $pdo_read->prepare("SELECT SUM(valor_investido) as inv, SUM(valor_atual) as atu FROM investimentos WHERE usuario_id = ? AND contexto = ?");
     $stmt->execute([$user_id, $contexto]);
     $res = $stmt->fetch(PDO::FETCH_ASSOC);
     $inv = (float)$res['inv']; 
@@ -267,7 +267,7 @@ if ($action === 'inv_summary') {
 
 // GRÁFICO DE ALOCAÇÃO
 if ($action === 'inv_chart') {
-    $stmt = $pdo->prepare("SELECT categoria, SUM(valor_atual) as total FROM investimentos WHERE usuario_id = ? AND contexto = ? GROUP BY categoria");
+    $stmt = $pdo_read->prepare("SELECT categoria, SUM(valor_atual) as total FROM investimentos WHERE usuario_id = ? AND contexto = ? GROUP BY categoria");
     $stmt->execute([$user_id, $contexto]);
     $dados = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $l = []; $v = []; 
@@ -288,20 +288,20 @@ if ($action === 'inv_add') {
     $ctx_salvar = $input['contexto'] ?? $_POST['contexto'] ?? $contexto;
 
     try {
-        $pdo->beginTransaction();
+        $pdo_write->beginTransaction();
         
         // 1. Salva o Investimento com o contexto certo
-        $pdo->prepare("INSERT INTO investimentos (usuario_id, categoria, ativo, valor_investido, valor_atual, data_aporte, contexto) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        $pdo_write->prepare("INSERT INTO investimentos (usuario_id, categoria, ativo, valor_investido, valor_atual, data_aporte, contexto) VALUES (?, ?, ?, ?, ?, ?, ?)")
             ->execute([$user_id, $cat, $ativo, $inv, $atu, $data, $ctx_salvar]);
         
         // 2. Gera a despesa (saída do caixa) também com o mesmo contexto
         //$pdo->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, 'fixo', ?, ?, ?, ?)")
             //->execute([$user_id, "Aporte: $ativo", $inv, $data, $ctx_salvar]);
         
-        $pdo->commit(); 
+        $pdo_write->commit(); 
         echo json_encode(['status'=>'success', 'message' => 'Investimento salvo em modo '.strtoupper($ctx_salvar)]);
     } catch(Exception $e) { 
-        $pdo->rollBack(); 
+        $pdo_write->rollBack(); 
         echo json_encode(['status'=>'error', 'message' => $e->getMessage()]); 
     }
     exit;
@@ -320,20 +320,20 @@ if ($action === 'inv_edit') {
     $ctx_salvar = $input['contexto'] ?? $_POST['contexto'] ?? $contexto;
 
     try {
-        $pdo->beginTransaction();
+        $pdo_write->beginTransaction();
         
         // 1. Salva o Investimento com o contexto certo
-        $pdo->prepare("Update investimentos set categoria = ?, ativo = ?, valor_investido = ?, valor_atual = ?, data_aporte = ? WHERE usuario_id = ? AND id = ?")
+        $pdo_write->prepare("Update investimentos set categoria = ?, ativo = ?, valor_investido = ?, valor_atual = ?, data_aporte = ? WHERE usuario_id = ? AND id = ?")
             ->execute([$cat, $ativo, $inv, $atu, $data, $user_id, $id]);
         
         // 2. Gera a despesa (saída do caixa) também com o mesmo contexto
         //$pdo->prepare("INSERT INTO transacoes (usuario_id, tipo, descricao, valor, data_transacao, contexto) VALUES (?, 'fixo', ?, ?, ?, ?)")
             //->execute([$user_id, "Aporte: $ativo", $inv, $data, $ctx_salvar]);
         
-        $pdo->commit(); 
+        $pdo_write->commit(); 
         echo json_encode(['status'=>'success', 'message' => 'Investimento salvo em modo '.strtoupper($ctx_salvar)]);
     } catch(Exception $e) { 
-        $pdo->rollBack(); 
+        $pdo_write->rollBack(); 
         echo json_encode(['status'=>'error', 'message' => $e->getMessage()]); 
     }
     exit;
@@ -343,7 +343,7 @@ if ($action === 'inv_edit') {
 if ($action === 'inv_delete') {
     $id = $input['id'] ?? $_POST['id'];
     // Só permite deletar se pertencer ao usuário (contexto não precisa filtrar aqui, pois ID é único)
-    $pdo->prepare("DELETE FROM investimentos WHERE id = ? AND usuario_id = ?")->execute([$id, $user_id]);
+    $pdo_write->prepare("DELETE FROM investimentos WHERE id = ? AND usuario_id = ?")->execute([$id, $user_id]);
     echo json_encode(['status'=>'success']); 
     exit;
 }
@@ -359,15 +359,15 @@ if (strpos($action, 'admin_') === 0) {
 
     if ($action === 'admin_users') {
         $sql = "SELECT u.id, u.nome, u.email, u.telefone, u.plano, u.creditos_ia, u.plano_expiracao, (SELECT COUNT(*) FROM transacoes t WHERE t.usuario_id = u.id) as total_transacoes, (SELECT SUM(valor) FROM transacoes t WHERE t.usuario_id = u.id AND t.tipo = 'receita') as receita_total FROM usuarios u ORDER BY u.id DESC";
-        $stmt = $pdo->query($sql);
+        $stmt = $pdo_read->query($sql);
         echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
         exit;
     }
 
     if ($action === 'admin_stats') {
-        $users = $pdo->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
-        $trans = $pdo->query("SELECT COUNT(*) FROM transacoes")->fetchColumn();
-        $receitaGlobal = $pdo->query("SELECT SUM(valor) FROM transacoes WHERE tipo in ('receita','saldo')")->fetchColumn(); 
+        $users = $pdo_read->query("SELECT COUNT(*) FROM usuarios")->fetchColumn();
+        $trans = $pdo_read->query("SELECT COUNT(*) FROM transacoes")->fetchColumn();
+        $receitaGlobal = $pdo_read->query("SELECT SUM(valor) FROM transacoes WHERE tipo in ('receita','saldo')")->fetchColumn(); 
         echo json_encode(['users' => $users, 'transacoes' => $trans, 'receita_global' => (float)$receitaGlobal]);
         exit;
     }
@@ -377,16 +377,16 @@ if (strpos($action, 'admin_') === 0) {
         $tel = $input['telefone'] ?? $_POST['telefone'];
         $plano = $input['plano'] ?? $_POST['plano'];
         $sql = "UPDATE usuarios SET telefone = ?, plano = ? WHERE id = ?";
-        $stmt = $pdo->prepare($sql);
+        $stmt = $pdo_write->prepare($sql);
         if ($stmt->execute([$tel, $plano, $id])) { echo json_encode(['status' => 'success']); } else { echo json_encode(['status' => 'error']); }
         exit;
     }
 
     if ($action === 'admin_delete_user') {
         $id = $input['id'] ?? $_POST['id'];
-        $pdo->prepare("DELETE FROM transacoes WHERE usuario_id = ?")->execute([$id]);
-        $pdo->prepare("DELETE FROM investimentos WHERE usuario_id = ?")->execute([$id]);
-        $pdo->prepare("DELETE FROM usuarios WHERE id = ?")->execute([$id]);
+        $pdo_write->prepare("DELETE FROM transacoes WHERE usuario_id = ?")->execute([$id]);
+        $pdo_write->prepare("DELETE FROM investimentos WHERE usuario_id = ?")->execute([$id]);
+        $pdo_write->prepare("DELETE FROM usuarios WHERE id = ?")->execute([$id]);
         echo json_encode(['status' => 'success']);
         exit;
     }
