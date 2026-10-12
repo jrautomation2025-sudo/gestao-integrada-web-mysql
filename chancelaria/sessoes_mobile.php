@@ -81,6 +81,7 @@ if (isset($_GET['sessao_id'])) {
             FROM chancelaria_presencas p 
             JOIN chancelaria_membros m ON p.membro_id = m.id 
             WHERE p.sessao_id = ?
+            AND p.status_presenca = 'P'
         ");
         $stmtM->execute([$sessao_id]);
         $presencas_membros = $stmtM->fetchAll(PDO::FETCH_ASSOC);
