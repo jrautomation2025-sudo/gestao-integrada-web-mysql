@@ -158,6 +158,9 @@ try {
                 <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#modalPresenca" <?= ($_SESSION['is_admin'] == 0) ? 'disabled' : '' ?>>
                     <i class="fas fa-plus"></i> Adicionar Presença
                 </button>
+                <button class="btn btn-warning fw-bold" data-bs-toggle="modal" data-bs-target="#modalJustificativa" <?= ($_SESSION['is_admin'] == 0) ? 'disabled' : '' ?>>
+                    <i class="fas fa-plus"></i> Adicionar Justificativa
+                </button>
                 <button class="btn btn-outline-light fw-bold" onclick="window.print()">
                     <i class="fas fa-print me-1"></i> Imprimir Relatório
                 </button>
@@ -328,6 +331,40 @@ try {
         </div>
     </div>
 
+    <!-- Modal Adicionar Justificativa -->
+    <div class="modal fade" id="modalJustificativa" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content" style="background-color: var(--bg-card); border: 1px solid var(--border-color);">
+                <form id="formAddJustificativa">
+                    <input type="hidden" name="tenant_id" value="<?= $tenant_id ?>">
+                    <input type="hidden" name="sessao_id" value="<?= $sessao_id ?>">
+                    <input type="hidden" name="status" value="P">
+                    
+                    <div class="modal-header border-bottom border-secondary">
+                        <h5 class="modal-title text-warning"><i class="fas fa-user-plus me-2"></i>Registrar Presença</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body text-white">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Obreiro</label>
+                            <select class="form-select" name="membro_id" required>
+                                <option value="">Selecione o irmão...</option>
+                                <?php foreach ($todosMembros as $m): ?>
+                                    <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nome']) ?> (CIM: <?= htmlspecialchars($m['cim']) ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                            <input type="text" class="form-select" name="justificativa">
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-secondary">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Salvar Presença</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
     function toggleMobileMenu() {
@@ -339,6 +376,29 @@ try {
 
     // Função para Salvar Presença via AJAX
     document.getElementById('formAddPresenca')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch('presenca_action', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            
+            if (result.sucesso) {
+                location.reload();
+            } else {
+                Swal.fire({ icon: 'error', title: 'Erro', text: result.mensagem, background: '#222738', color: '#fff' });
+            }
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'Erro de comunicação', background: '#222738', color: '#fff' });
+        }
+    });
+
+    // Função para Salvar Presença via AJAX
+    document.getElementById('formAddJustificativa')?.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         const formData = new FormData(this);
