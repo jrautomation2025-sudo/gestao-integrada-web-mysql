@@ -57,7 +57,7 @@ try {
                      AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_presencas,
                      (SELECT COUNT(DISTINCT p.sessao_id) FROM chancelaria_presencas p  
                      JOIN chancelaria_sessoes s ON p.sessao_id = s.id  
-                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'Justificado'  
+                     WHERE p.membro_id = m.id AND s.tenant_id = ? AND p.status_presenca = 'J'  
                      AND s.status = 'Realizada' AND YEAR(s.data_sessao) = ?) as total_justificativas 
                     FROM chancelaria_membros m  
                     WHERE m.tenant_id = ? AND m.status = 'Ativo' AND m.presenca = 'obrigatoria'
