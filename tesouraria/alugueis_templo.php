@@ -137,27 +137,39 @@ if (isset($_GET['baixar'])) {
     $id_baixa = (int)$_GET['baixar'];
     $data_hoje = date('Y-m-d');
     
-    // 1. Atualiza o status do aluguel respeitando o tenant
-    $stmt = $pdo_write->prepare("UPDATE tesouraria_alugueis_templo SET status = 'Pago', pagamento = ? WHERE id = ? AND tenant_id = ?");
-    $stmt->execute([$data_hoje, $id_baixa, $user_id]);
-    
-    // 2. Busca dados com segurança (filtrando também pelo tenant_id)
-    $stmt_dados = $pdo_read->prepare("SELECT loja_coirma, valor, vencimento FROM tesouraria_alugueis_templo WHERE id = ? AND tenant_id = ?");
-    $stmt_dados->execute([$id_baixa, $user_id]);
-    $dados = $stmt_dados->fetch(PDO::FETCH_ASSOC);
-    
-    // Garante que o registro realmente existe antes de prosseguir
-    if ($dados) {
-        $data = obterNomeMesPt($dados['vencimento']);
-        $loja = $dados['loja_coirma'];
-        $valor_transacao = $dados['valor'];
+    try {
+        // Inicia transação para garantir atomicidade
+        $pdo_write->beginTransaction();
+
+        // 1. Atualiza o status do aluguel respeitando o tenant
+        $stmt = $pdo_write->prepare("UPDATE tesouraria_alugueis_templo SET status = 'Pago', pagamento = ? WHERE id = ? AND tenant_id = ?");
+        $stmt->execute([$data_hoje, $id_baixa, $user_id]);
         
-        // Correção da concatenação da descrição
-        $descricao_transacao = "Pagamento aluguel - " . $loja . " (" . $data . ")";
+        // 2. Busca dados com segurança (filtrando também pelo tenant_id)
+        $stmt_dados = $pdo_read->prepare("SELECT loja_coirma, valor, vencimento FROM tesouraria_alugueis_templo WHERE id = ? AND tenant_id = ?");
+        $stmt_dados->execute([$id_baixa, $user_id]);
+        $dados = $stmt_dados->fetch(PDO::FETCH_ASSOC);
         
-        // 3. Insere automaticamente na tabela oficial 'transacoes'
-        $stmt_trans = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')");
-        $stmt_trans->execute([$user_id, $descricao_transacao, $valor_transacao, $data_hoje]);
+        // Garante que o registro realmente existe antes de prosseguir
+        if ($dados) {
+            $data = obterNomeMesPt($dados['vencimento']);
+            $loja = $dados['loja_coirma'];
+            $valor_transacao = $dados['valor'];
+            
+            // Monta a descrição da transação de forma limpa
+            $descricao_transacao = "Pagamento aluguel - " . $loja . " (" . $data . ")";
+            
+            // 3. Insere automaticamente na tabela oficial 'transacoes'
+            $stmt_trans = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')");
+            $stmt_trans->execute([$user_id, $descricao_transacao, $valor_transacao, $data_hoje]);
+        }
+
+        $pdo_write->commit();
+        $_SESSION['mensagem'] = "Baixa realizada e transação gerada com sucesso!";
+        
+    } catch (Exception $e) {
+        $pdo_write->rollBack();
+        $_SESSION['erro'] = "Erro ao processar a baixa: " . $e->getMessage();
     }
     
     // Evita erros caso os filtros de mês/ano venham vazios da URL
@@ -166,6 +178,17 @@ if (isset($_GET['baixar'])) {
     
     header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
     exit;
+}
+
+function obterNomeMesPt($dataStr) {
+    $meses = [
+        1 => 'Janeiro', 2 => 'Fevereiro', 3 => 'Março', 4 => 'Abril', 
+        5 => 'Maio', 6 => 'Junho', 7 => 'Julho', 8 => 'Agosto', 
+        9 => 'Setembro', 10 => 'Outubro', 11 => 'Novembro', 12 => 'Dezembro'
+    ];
+    
+    $numeroMes = (int) date('m', strtotime($dataStr));
+    return $meses[$numeroMes] ?? '';
 }
 
 // Processa o Disparo do Webhook para o n8n (Enviar Recibo)
@@ -238,19 +261,6 @@ if (isset($_GET['enviar_recibo'])) {
             exit;
         }
     }
-}
-
-function obterNomeMesPt($dataStr) {
-    $meses = [
-        1 => 'Janeiro', 'Fevereiro', 'Março', 'Abril', 
-        May => 'Maio', 'Junho', 'Julho', 'Agosto', 
-        'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-    
-    // Converte a data para um timestamp ou usa DateTime
-    $numeroMes = (int) date('m', strtotime($dataStr));
-    
-    return $meses[$numeroMes] ?? '';
 }
 
 // 1. Resumo Financeiro (Se $filtro_mes estiver vazio, filtra apenas pelo ano)
