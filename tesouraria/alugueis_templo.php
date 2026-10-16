@@ -143,11 +143,12 @@ if (isset($_GET['baixar'])) {
     $stmt_dados = $pdo_read->prepare("SELECT loja_coirma, valor, vencimento FROM tesouraria_alugueis_templo WHERE id = ?");
     $stmt_dados->execute([$id_baixa]);
     $dados = $stmt_dados->fetch(PDO::FETCH_ASSOC);
-    
-     // 2. Insere automaticamente na tabela oficial 'transacoes'
-    $descricao_transacao = "Pagamento aluguel - " . $dados['loja_coirma'] . " (. $dados['vencimento'] .) ";
+    $data = obterNomeMesPt($dados['vencimento']);
+    $loja = $dados['loja_coirma'];
     $valor_transacao = $dados['valor'];
-            
+    $descricao_transacao = "Pagamento aluguel - " . $loja . " (. $data .) ";
+    
+    // 2. Insere automaticamente na tabela oficial 'transacoes'
     $stmt_trans = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')");
     $stmt_trans->execute([$user_id, $descricao_transacao, $valor_transacao, $data_hoje]);
     header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
@@ -224,6 +225,19 @@ if (isset($_GET['enviar_recibo'])) {
             exit;
         }
     }
+}
+
+function obterNomeMesPt($dataStr) {
+    $meses = [
+        1 => 'Janeiro', 'Fevereiro', 'Março', 'Abril', 
+        May => 'Maio', 'Junho', 'Julho', 'Agosto', 
+        'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    
+    // Converte a data para um timestamp ou usa DateTime
+    $numeroMes = (int) date('m', strtotime($dataStr));
+    
+    return $meses[$numeroMes] ?? '';
 }
 
 // 1. Resumo Financeiro (Se $filtro_mes estiver vazio, filtra apenas pelo ano)
