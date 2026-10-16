@@ -49,18 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             ");
             $stmt->execute([$user_id, $loja_coirma, $responsavel, $valor, $tipo, $vencimento, $observacoes]);
 
-            // 2. Insere automaticamente na tabela oficial 'transacoes'
-            $descricao_transacao = "Aluguel de Templo - " . $loja_coirma . (!empty($observacoes) ? " ({$observacoes})" : "");
-            
-            $stmt_trans = $pdo_write->prepare("
-                INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) 
-                VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')
-            ");
-            $stmt_trans->execute([$user_id, $descricao_transacao, $valor, $vencimento]);
-
             $pdo_write->commit();
             // Grava mensagem na sessão e redireciona
-            $_SESSION['mensagem'] = "Aluguel lançado e espelhado nas transações com sucesso!";
+            $_SESSION['mensagem'] = "Aluguel lançado com sucesso!";
             $mensagem = $_SESSION['mensagem'];
             header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
             exit;
@@ -147,6 +138,14 @@ if (isset($_GET['baixar'])) {
     $data_hoje = date('Y-m-d');
     $stmt = $pdo_write->prepare("UPDATE tesouraria_alugueis_templo SET status = 'Pago', pagamento = ? WHERE id = ? AND tenant_id = ?");
     $stmt->execute([$data_hoje, $id_baixa, $user_id]);
+     // 2. Insere automaticamente na tabela oficial 'transacoes'
+            $descricao_transacao = "Aluguel de Templo - " . $loja_coirma . (!empty($observacoes) ? " ({$observacoes})" : "");
+            
+            $stmt_trans = $pdo_write->prepare("
+                INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) 
+                VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')
+            ");
+            $stmt_trans->execute([$user_id, $descricao_transacao, $valor, $data_hoje]);
     header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
     exit;
 }
