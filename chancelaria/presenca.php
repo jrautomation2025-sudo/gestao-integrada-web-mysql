@@ -338,7 +338,7 @@ try {
                 <form id="formAddJustificativa">
                     <input type="hidden" name="tenant_id" value="<?= $tenant_id ?>">
                     <input type="hidden" name="sessao_id" value="<?= $sessao_id ?>">
-                    <input type="hidden" name="status" value="P">
+                    <input type="hidden" name="status" value="J">
                     
                     <div class="modal-header border-bottom border-secondary">
                         <h5 class="modal-title text-warning"><i class="fas fa-user-plus me-2"></i>Registrar Presença</h5>
