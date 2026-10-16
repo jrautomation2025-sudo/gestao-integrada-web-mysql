@@ -138,14 +138,18 @@ if (isset($_GET['baixar'])) {
     $data_hoje = date('Y-m-d');
     $stmt = $pdo_write->prepare("UPDATE tesouraria_alugueis_templo SET status = 'Pago', pagamento = ? WHERE id = ? AND tenant_id = ?");
     $stmt->execute([$data_hoje, $id_baixa, $user_id]);
+    
+    // 1. busca dados
+    $stmt_dados = $pdo_read->prepare("SELECT loja_coirma, valor, vencimento FROM tesouraria_alugueis_templo WHERE id = ?");
+    $stmt_dados->execute([$id_baixa]);
+    $dados = $stmt_dados->fetch(PDO::FETCH_ASSOC);
+    
      // 2. Insere automaticamente na tabela oficial 'transacoes'
-            $descricao_transacao = "Aluguel de Templo - " . $loja_coirma . (!empty($observacoes) ? " ({$observacoes})" : "");
+    $descricao_transacao = "Pagamento aluguel - " . $dados['loja_coirma'] . " (. $dados['vencimento'] .) ";
+    $valor_transacao = $dados['valor'];
             
-            $stmt_trans = $pdo_write->prepare("
-                INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) 
-                VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')
-            ");
-            $stmt_trans->execute([$user_id, $descricao_transacao, $valor, $data_hoje]);
+    $stmt_trans = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')");
+    $stmt_trans->execute([$user_id, $descricao_transacao, $valor_transacao, $data_hoje]);
     header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
     exit;
 }
