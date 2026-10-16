@@ -136,21 +136,34 @@ if (isset($_GET['excluir'])) {
 if (isset($_GET['baixar'])) {
     $id_baixa = (int)$_GET['baixar'];
     $data_hoje = date('Y-m-d');
+    
+    // 1. Atualiza o status do aluguel respeitando o tenant
     $stmt = $pdo_write->prepare("UPDATE tesouraria_alugueis_templo SET status = 'Pago', pagamento = ? WHERE id = ? AND tenant_id = ?");
     $stmt->execute([$data_hoje, $id_baixa, $user_id]);
     
-    // 1. busca dados
-    $stmt_dados = $pdo_read->prepare("SELECT loja_coirma, valor, vencimento FROM tesouraria_alugueis_templo WHERE id = ?");
-    $stmt_dados->execute([$id_baixa]);
+    // 2. Busca dados com segurança (filtrando também pelo tenant_id)
+    $stmt_dados = $pdo_read->prepare("SELECT loja_coirma, valor, vencimento FROM tesouraria_alugueis_templo WHERE id = ? AND tenant_id = ?");
+    $stmt_dados->execute([$id_baixa, $user_id]);
     $dados = $stmt_dados->fetch(PDO::FETCH_ASSOC);
-    $data = obterNomeMesPt($dados['vencimento']);
-    $loja = $dados['loja_coirma'];
-    $valor_transacao = $dados['valor'];
-    $descricao_transacao = "Pagamento aluguel - " . $loja . " (. $data .) ";
     
-    // 2. Insere automaticamente na tabela oficial 'transacoes'
-    $stmt_trans = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')");
-    $stmt_trans->execute([$user_id, $descricao_transacao, $valor_transacao, $data_hoje]);
+    // Garante que o registro realmente existe antes de prosseguir
+    if ($dados) {
+        $data = obterNomeMesPt($dados['vencimento']);
+        $loja = $dados['loja_coirma'];
+        $valor_transacao = $dados['valor'];
+        
+        // Correção da concatenação da descrição
+        $descricao_transacao = "Pagamento aluguel - " . $loja . " (" . $data . ")";
+        
+        // 3. Insere automaticamente na tabela oficial 'transacoes'
+        $stmt_trans = $pdo_write->prepare("INSERT INTO transacoes (usuario_id, descricao, valor, tipo, data_transacao, categoria, contexto) VALUES (?, ?, ?, 'receita', ?, 'Geral', 'pessoal')");
+        $stmt_trans->execute([$user_id, $descricao_transacao, $valor_transacao, $data_hoje]);
+    }
+    
+    // Evita erros caso os filtros de mês/ano venham vazios da URL
+    $filtro_mes = isset($_GET['mes']) ? $_GET['mes'] : date('m');
+    $filtro_ano = isset($_GET['ano']) ? $_GET['ano'] : date('Y');
+    
     header("Location: alugueis_templo.php?mes=$filtro_mes&ano=$filtro_ano");
     exit;
 }
