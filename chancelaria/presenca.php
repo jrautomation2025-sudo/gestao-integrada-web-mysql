@@ -343,7 +343,7 @@ try {
                     <input type="hidden" name="status" value="J">
                     
                     <div class="modal-header border-bottom border-secondary">
-                        <h5 class="modal-title text-warning"><i class="fas fa-user-plus me-2"></i>Registrar Presença</h5>
+                        <h5 class="modal-title text-warning"><i class="fas fa-user-plus me-2"></i>Registrar Justificativa</h5>
                         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body text-white">
