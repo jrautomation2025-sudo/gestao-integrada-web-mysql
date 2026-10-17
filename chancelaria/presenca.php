@@ -79,6 +79,7 @@ try {
         .form-select, .form-control { background-color: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); }
         .form-select:focus, .form-control:focus { border-color: var(--gold); box-shadow: 0 0 0 0.25rem rgba(245, 192, 65, 0.25); color: var(--text-main); }
         .form-input { background-color: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); }
+        .form-input:focus { border-color: var(--gold); box-shadow: 0 0 0 0.25rem rgba(245, 192, 65, 0.25); color: var(--text-main); }
         .table-dark-custom { color: var(--text-main); vertical-align: middle; }
         .table-dark-custom thead th { background-color: rgba(0,0,0,0.2); color: var(--gold); border-bottom: 2px solid var(--border-color); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
         .table-dark-custom tbody td { background-color: transparent; border-bottom: 1px solid var(--border-color); padding: 15px 10px; color: #fff; }
