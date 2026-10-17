@@ -353,7 +353,9 @@ try {
                                     <option value="<?= $m['id'] ?>"><?= htmlspecialchars($m['nome']) ?> (CIM: <?= htmlspecialchars($m['cim']) ?>)</option>
                                 <?php endforeach; ?>
                             </select>
-                            <input type="text" class="form-select" name="justificativa">
+                        </div>
+                        <div class="mb-3">
+                            <input type="text" name="justificativa">
                         </div>
                     </div>
                     <div class="modal-footer border-top border-secondary">
