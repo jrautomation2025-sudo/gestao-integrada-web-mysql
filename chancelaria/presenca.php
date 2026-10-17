@@ -78,6 +78,7 @@ try {
         .card-custom { background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; padding: 25px; }
         .form-select, .form-control { background-color: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); }
         .form-select:focus, .form-control:focus { border-color: var(--gold); box-shadow: 0 0 0 0.25rem rgba(245, 192, 65, 0.25); color: var(--text-main); }
+        .form-input { background-color: var(--bg-main); border: 1px solid var(--border-color); color: var(--text-main); }
         .table-dark-custom { color: var(--text-main); vertical-align: middle; }
         .table-dark-custom thead th { background-color: rgba(0,0,0,0.2); color: var(--gold); border-bottom: 2px solid var(--border-color); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
         .table-dark-custom tbody td { background-color: transparent; border-bottom: 1px solid var(--border-color); padding: 15px 10px; color: #fff; }
@@ -355,12 +356,12 @@ try {
                             </select>
                         </div>
                         <div class="mb-3">
-                            <input type="text" name="justificativa">
+                            <input type="text" class="form-input" name="justificativa">
                         </div>
                     </div>
                     <div class="modal-footer border-top border-secondary">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-warning">Salvar Presença</button>
+                        <button type="submit" class="btn btn-warning">Salvar Justificativa</button>
                     </div>
                 </form>
             </div>
