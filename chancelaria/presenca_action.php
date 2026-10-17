@@ -23,6 +23,7 @@ $sessao_id = (int)($_POST['sessao_id'] ?? 0);
 $membro_id = (int)($_POST['membro_id'] ?? 0);
 $acao      = $_POST['acao'] ?? 'adicionar'; // Pega a ação, se não vier, assume que é adicionar
 $status    = $_POST['status'] ?? 'P';
+$justificativa    = $_POST['justificativa'] ?? '';
 
 if ($sessao_id === 0 || $membro_id === 0) {
     echo json_encode(['sucesso' => false, 'mensagem' => 'Dados incompletos enviados.']);
@@ -51,8 +52,8 @@ try {
         }
 
         // 2. Se não tem, insere a presença
-        $stmtIns = $pdo_write->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca) VALUES (?, ?, ?, ?)");
-        $stmtIns->execute([$tenant_id, $sessao_id, $membro_id, $status]);
+        $stmtIns = $pdo_write->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca, justificativa) VALUES (?, ?, ?, ?, ?)");
+        $stmtIns->execute([$tenant_id, $sessao_id, $membro_id, $status, $justificativa]);
 
         echo json_encode(['sucesso' => true]);
     }
