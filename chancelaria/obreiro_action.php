@@ -55,7 +55,7 @@ try {
     // 2. AÇÃO: CRIAR
     if ($acao === 'criar') {
         $sql = "INSERT INTO chancelaria_membros (tenant_id, nome, cim, grau, cargo, status, presenca, telefone, email, data_nascimento, data_iniciacao) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $pdo_write->prepare($sql);
         $stmt->execute([$tenant_id, $nome, $cim, $grau, $cargo, $status, $presenca, $telefone, $email, $data_nascimento, $data_iniciacao]);
         
