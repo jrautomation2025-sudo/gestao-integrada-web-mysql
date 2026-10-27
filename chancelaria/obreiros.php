@@ -225,6 +225,7 @@ try {
                             <div class="col-md-4">
                                 <label class="form-label text-white">Cargo Atual</label>
                                 <select class="form-select" name="cargo" id="formCargo">
+                                    <option value="">Nenhum</option>
                                     <option value="veneravel">Venerável Mestre</option>
                                     <option value="vigilante_1">1° Vigilante</option>
                                     <option value="vigilante_2">2° Vigilante</option>
