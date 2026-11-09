@@ -13,6 +13,10 @@ $user_id = $_SESSION['tenant_id'] ?? $_SESSION['user_id'] ?? $_SESSION['user']['
 $msg_sucesso = '';
 $msg_erro = '';
 
+// Captura o filtro de ano (Padrão: ano corrente)
+$ano_corrente = date('Y');
+$filtro_ano = $_GET['ano'] ?? $ano_corrente;
+
 // =========================================================================
 // PROCESSAMENTO DO FORMULÁRIO (SALVAR / EDITAR / EXCLUIR)
 // =========================================================================
@@ -56,10 +60,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // =========================================================================
-// BUSCA OS REGISTROS E CALCULA SALDOS
+// BUSCA OS REGISTROS COM FILTRO DE ANO E CALCULA SALDOS
 // =========================================================================
-$stmt = $pdo_read->prepare("SELECT b.*, c.nome as nome_membro FROM hospitalaria_beneficencia b LEFT JOIN clientes c ON b.membro_id = c.id WHERE b.tenant_id = ? ORDER BY b.data_registro DESC, b.id DESC");
-$stmt->execute([$user_id]);
+if ($filtro_ano === 'todos') {
+    $stmt = $pdo_read->prepare("SELECT b.*, c.nome as nome_membro FROM hospitalaria_beneficencia b LEFT JOIN clientes c ON b.membro_id = c.id WHERE b.tenant_id = ? ORDER BY b.data_registro DESC, b.id DESC");
+    $stmt->execute([$user_id]);
+} else {
+    $stmt = $pdo_read->prepare("SELECT b.*, c.nome as nome_membro FROM hospitalaria_beneficencia b LEFT JOIN clientes c ON b.membro_id = c.id WHERE b.tenant_id = ? AND YEAR(b.data_registro) = ? ORDER BY b.data_registro DESC, b.id DESC");
+    $stmt->execute([$user_id, $filtro_ano]);
+}
 $movimentacoes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $stmtMembros = $pdo_read->prepare("SELECT id, nome FROM clientes WHERE usuario_id = ? ORDER BY nome ASC");
@@ -155,22 +164,40 @@ $saldo_atual = $total_entradas - $total_saidas;
             <script>Swal.fire({ icon: 'error', title: 'Erro!', text: '<?= $msg_erro ?>', background: '#1e293b', color: '#fff' });</script>
         <?php endif; ?>
 
+        <!-- Formulário de Filtro por Ano -->
+        <div class="card-custom mb-4">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label text-gold fw-bold">Filtrar por Ano</label>
+                    <select name="ano" class="form-select">
+                        <option value="todos" <?= $filtro_ano === 'todos' ? 'selected' : '' ?>>Todos os Anos</option>
+                        <?php for($y = date('Y'); $y >= 2024; $y--): ?>
+                            <option value="<?= $y ?>" <?= $filtro_ano == $y ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-warning w-100"><i class="fas fa-search me-2"></i> Filtrar</button>
+                </div>
+            </form>
+        </div>
+
         <div class="row g-4 mb-4">
             <div class="col-md-4">
                 <div class="card-resumo bg-entrada">
-                    <h6 class="text-white-50 fw-bold"><i class="fas fa-arrow-down me-2"></i> TotaL Arrecadado</h6>
+                    <h6 class="text-white-50 fw-bold"><i class="fas fa-arrow-down me-2"></i> Total Arrecadado (<?= $filtro_ano === 'todos' ? 'Geral' : $filtro_ano ?>)</h6>
                     <h3 class="mb-0 fw-bold">R$ <?= number_format($total_entradas, 2, ',', '.') ?></h3>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card-resumo bg-saida">
-                    <h6 class="text-white-50 fw-bold"><i class="fas fa-arrow-up me-2"></i> Total de Auxílios (Saídas)</h6>
+                    <h6 class="text-white-50 fw-bold"><i class="fas fa-arrow-up me-2"></i> Total de Auxílios (<?= $filtro_ano === 'todos' ? 'Geral' : $filtro_ano ?>)</h6>
                     <h3 class="mb-0 fw-bold">R$ <?= number_format($total_saidas, 2, ',', '.') ?></h3>
                 </div>
             </div>
             <div class="col-md-4">
                 <div class="card-resumo bg-saldo">
-                    <h6 class="text-white-50 fw-bold"><i class="fas fa-piggy-bank me-2"></i> Saldo Disponível</h6>
+                    <h6 class="text-white-50 fw-bold"><i class="fas fa-piggy-bank me-2"></i> Saldo Disponível (<?= $filtro_ano === 'todos' ? 'Geral' : $filtro_ano ?>)</h6>
                     <h3 class="mb-0 fw-bold">R$ <?= number_format($saldo_atual, 2, ',', '.') ?></h3>
                 </div>
             </div>
@@ -191,7 +218,7 @@ $saldo_atual = $total_entradas - $total_saidas;
                     </thead>
                     <tbody>
                         <?php if (empty($movimentacoes)): ?>
-                            <tr><td colspan="6" class="text-center text-muted py-4">Nenhuma movimentação registrada.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-4">Nenhuma movimentação registrada para este período.</td></tr>
                         <?php else: ?>
                             <?php foreach ($movimentacoes as $mov): ?>
                                 <tr>
@@ -211,7 +238,6 @@ $saldo_atual = $total_entradas - $total_saidas;
                                         R$ <?= number_format($mov['valor'], 2, ',', '.') ?>
                                     </td>
                                     <td class="text-end text-nowrap">
-                                        <!-- NOVO: Botão de Editar -->
                                         <button class="btn btn-sm btn-outline-warning me-1" onclick='editarRegistro(<?= json_encode($mov) ?>)' title="Editar Lançamento">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -245,7 +271,6 @@ $saldo_atual = $total_entradas - $total_saidas;
             <form method="POST">
                 <div class="modal-body">
                     <input type="hidden" name="acao" value="salvar">
-                    <!-- NOVO: Campo oculto para o ID -->
                     <input type="hidden" name="id" id="form_id" value="">
 
                     <div class="row g-3">
@@ -305,14 +330,13 @@ $saldo_atual = $total_entradas - $total_saidas;
 
     function abrirModal() {
         document.querySelector('form').reset();
-        document.getElementById('form_id').value = ''; // Limpa o ID para garantir que é um novo registro
+        document.getElementById('form_id').value = '';
         document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus me-2"></i> Lançar Movimentação';
         document.getElementById('form_data').value = new Date().toISOString().split('T')[0];
         mudarCores();
         modalForm.show();
     }
 
-    // NOVO: Função para carregar os dados no formulário e editar
     function editarRegistro(dados) {
         document.getElementById('form_id').value = dados.id;
         document.getElementById('form_tipo').value = dados.tipo;
@@ -320,14 +344,13 @@ $saldo_atual = $total_entradas - $total_saidas;
         document.getElementById('form_descricao').value = dados.descricao;
         document.getElementById('form_membro').value = dados.membro_id || '';
         
-        // Formatar o valor que vem do banco (ex: 1500.00) para o padrão brasileiro (1.500,00)
         let valorNum = parseFloat(dados.valor).toFixed(2);
         let valorBR = valorNum.replace('.', ',');
         valorBR = valorBR.replace(/\B(?=(\d{3})+(?!\d))/g, "."); 
         document.getElementById('form_valor').value = valorBR;
 
         document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i> Editar Movimentação';
-        mudarCores(); // Atualiza a cor do botão baseado no tipo (Entrada/Saída)
+        mudarCores();
         modalForm.show();
     }
 
