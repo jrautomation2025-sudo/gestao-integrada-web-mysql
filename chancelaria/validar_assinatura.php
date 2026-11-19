@@ -82,7 +82,7 @@ if ($codigo !== '') {
         SELECT 
             p.*,
             s.titulo AS sessao_titulo,
-            COALESCE(s.data, s.data_sessao) AS sessao_data,
+            s.data_sessao AS sessao_data,
             s.hora_sessao AS sessao_hora,
             m.nome AS membro_nome,
             m.cim AS membro_cim,
