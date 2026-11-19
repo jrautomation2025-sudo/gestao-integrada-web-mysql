@@ -25,10 +25,16 @@ define('API_SECRET', $n8n_secret_key);
 define('N8N_JWT_SECRET', $n8n_jwt_key);
 define('BASE_URL', $n8n_base_url);
 
-// Assinatura digital
-define('APP_SIGNATURE_SECRET', '176381fdef3b5e0ff3e59fe0c1c89470c5d683a257ba229fda409a33a352c604');
-define('ICP_CERT_PFX_PATH', '/etc/chancelaria/certs/certificado_a1.pfx');
-define('ICP_CERT_PFX_PASS', 'iSvRGAbxMJGVC)Z');
+// Assinatura Eletrônica e Certificado ICP-Brasil A1
+if (!defined('APP_SIGNATURE_SECRET')) {
+    define('APP_SIGNATURE_SECRET', '176381fdef3b5e0ff3e59fe0c1c89470c5d683a257ba229fda409a33a352c604'); // Troque por 64 hex chars aleatórios
+}
+if (!defined('ICP_CERT_PFX_PATH')) {
+    define('ICP_CERT_PFX_PATH', '/etc/chancelaria/certs/certificado_a1.pfx'); // Caminho fora da pasta pública
+}
+if (!defined('ICP_CERT_PFX_PASS')) {
+    define('ICP_CERT_PFX_PASS', 'iSvRGAbxMJGVC)Z');
+}
 
 try {
     // 1. Conexão de ESCRITA (Master - Aponta para o IP da Tailscale de Gravação)
