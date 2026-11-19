@@ -2,14 +2,13 @@
 //ini_set('display_errors', 1);
 //error_reporting(E_ALL);
 require_once '../configuracoes/config.php';
-session_start(); // Assegura que a sessão está ativa para verificar o login do adm
+session_start();
 
 // ==========================================
 // FUNÇÕES AUXILIARES DE AUDITORIA E ASSINATURA
 // ==========================================
 function obterIpCliente(): string {
     $candidatos = [];
-
     if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
         $candidatos[] = $_SERVER['HTTP_CF_CONNECTING_IP'];
     }
@@ -21,13 +20,11 @@ function obterIpCliente(): string {
     if (!empty($_SERVER['REMOTE_ADDR'])) {
         $candidatos[] = $_SERVER['REMOTE_ADDR'];
     }
-
     foreach ($candidatos as $ip) {
         if (filter_var($ip, FILTER_VALIDATE_IP)) {
             return $ip;
         }
     }
-
     return '0.0.0.0';
 }
 
@@ -52,7 +49,7 @@ function gerarEvidenciaAssinatura(array $dados): array {
 }
 
 // ==========================================
-// VALIDAÇÃO INICIAL DA PÁGINA & COOKIE DE BLOQUEIO
+// VALIDAÇÃO INICIAL DA PÁGINA & BLOQUEIOS
 // ==========================================
 $token = $_GET['token'] ?? '';
 
@@ -71,12 +68,12 @@ if (!$sessao) {
 $sessao_id = (int)$sessao['id'];
 $tenant_id = (int)$sessao['tenant_id'];
 
-// Verifica se quem está acessando é o Administrador/Gestor logado no painel
 $is_admin_logado = isset($_SESSION['chanceler_logado']) || isset($_SESSION['tenant_id']) || (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1);
 
-// ==========================================
-// TRAVA: DATA DA SESSÃO E HORÁRIO
-// ==========================================
+// Trava se a lista oficial em PDF já foi emitida e encerrada
+$lista_encerrada = ((int)($sessao['lista_emitida'] ?? 0) === 1) && !$is_admin_logado;
+
+// Trava de data/horário da sessão
 $erro_bloqueio_tempo = "";
 $data_sessao = $sessao['data'] ?? $sessao['data_sessao'] ?? date('Y-m-d');
 $hora_sessao = $sessao['hora_sessao'] ?? '19:00:00';
@@ -93,10 +90,7 @@ if (!$is_admin_logado) {
     }
 }
 
-// Nome do cookie único para esta sessão
 $cookie_nome = "checkin_realizado_" . $sessao_id;
-
-// Se for administrador, o bloqueio por cookie é ignorado (fica sempre liberado)
 $ja_registrado_cookie = $is_admin_logado ? false : isset($_COOKIE[$cookie_nome]);
 
 // ==========================================
@@ -107,8 +101,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
         ob_end_clean();
     }
     ob_start();
-
     header('Content-Type: application/json; charset=utf-8');
+
+    if ($lista_encerrada) {
+        echo json_encode(['status' => 'erro', 'mensagem' => 'A lista oficial desta sessão já foi emitida e encerrada.']);
+        exit;
+    }
 
     if (!empty($erro_bloqueio_tempo)) {
         echo json_encode(['status' => 'erro', 'mensagem' => $erro_bloqueio_tempo]);
@@ -152,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
     }
 }
 
-$presença = 'P';
+$presenca = 'P';
 
 // ==========================================
 // PROCESSAMENTO DO FORMULÁRIO COMUM (POST)
@@ -163,7 +161,9 @@ $sucesso_registro = false;
 $comprovante_assinatura = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
-    if (!empty($erro_bloqueio_tempo)) {
+    if ($lista_encerrada) {
+        $erro = "A lista oficial desta sessão já foi emitida e encerrada. Novos registros estão bloqueados.";
+    } elseif (!empty($erro_bloqueio_tempo)) {
         $erro = $erro_bloqueio_tempo;
     } elseif ($ja_registrado_cookie) {
         $erro = "Este dispositivo já registrou presença nesta sessão.";
@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                         'tenant_id'     => $tenant_id,
                         'sessao_id'     => $sessao_id,
                         'membro_id'     => $obreiro_id,
-                        'status'        => $presença,
+                        'status'        => $presenca,
                         'ip_origem'     => $ipCliente,
                         'user_agent'    => $userAgent
                     ]);
@@ -211,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                         $tenant_id,
                         $sessao_id,
                         $obreiro_id,
-                        $presença,
+                        $presenca,
                         $evidencia['codigo_assinatura'],
                         $evidencia['hash_assinatura'],
                         $evidencia['assinado_em_utc'],
@@ -267,7 +267,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                     'visitante_id'  => $visitanteId,
                     'cim_visitante' => $cim_visitante,
                     'nome'          => $nome,
-                    'status'        => $presença,
+                    'status'        => $presenca,
                     'ip_origem'     => $ipCliente,
                     'user_agent'    => $userAgent
                 ]);
@@ -286,7 +286,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                     $visitanteId,
                     $nome,
                     $cim_visitante,
-                    $presença,
+                    $presenca,
                     $evidencia['codigo_assinatura'],
                     $evidencia['hash_assinatura'],
                     $evidencia['assinado_em_utc'],
@@ -376,7 +376,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
     <?php endif; ?>
 
     <div class="card-custom">
-        <?php if (!empty($erro_bloqueio_tempo)): ?>
+        <?php if ($lista_encerrada): ?>
+            <div class="text-center py-4">
+                <i class="fas fa-lock text-warning mb-3" style="font-size: 3rem;"></i>
+                <h5 class="text-warning mb-2">Sessão Encerrada</h5>
+                <p class="text-white small mb-0">A lista oficial de presença desta sessão já foi emitida e assinada digitalmente. Novos registros estão bloqueados.</p>
+            </div>
+        <?php elseif (!empty($erro_bloqueio_tempo)): ?>
             <div class="text-center py-4">
                 <i class="fas fa-clock text-warning mb-3" style="font-size: 3rem;"></i>
                 <h5 class="text-warning mb-2">Check-in Indisponível</h5>
