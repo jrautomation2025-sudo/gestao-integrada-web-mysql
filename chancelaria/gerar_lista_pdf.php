@@ -30,7 +30,7 @@ $sufixoArquivo = match ($filtro) {
 
 // 2. Busca dados da sessão
 $stmtSessao = $pdo_read->prepare("
-    SELECT *, COALESCE(data, data_sessao) AS data_ref
+    SELECT *, data_sessao AS data_ref
     FROM chancelaria_sessoes
     WHERE id = ?
     LIMIT 1
