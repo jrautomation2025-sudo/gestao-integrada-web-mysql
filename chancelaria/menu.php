@@ -199,6 +199,7 @@ $paginaAtual = basename($_SERVER['PHP_SELF'], ".php");
         <ul class="sidebar-nav">
             <li><a href="presenca" class="<?= ($paginaAtual == 'presenca') ? 'active' : '' ?>"><i class="fas fa-check-square"></i> Presenças</a></li>
             <li><a href="visitantes" class="<?= ($paginaAtual == 'visitantes') ? 'active' : '' ?>"><i class="fas fa-id-badge"></i> Visitantes</a></li>
+            <li><a href="emissao_lista" class="<?= ($paginaAtual == 'emissao_lista') ? 'active' : '' ?>"><i class="fa-solid fa-clipboard-list"></i> Lista de Presenças</a></li>
             <li><a href="mensagens" class="<?= ($paginaAtual == 'mensagens') ? 'active' : '' ?>"><i class="fab fa-whatsapp"></i> Mensagens</a></li>
         </ul>
 
