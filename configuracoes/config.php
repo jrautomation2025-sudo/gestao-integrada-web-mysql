@@ -17,8 +17,6 @@ $n8n_api_key      = getenv('API_TOKEN');
 $n8n_secret_key   = getenv('API_SECRET');
 $n8n_jwt_key      = getenv('N8N_JWT_SECRET');
 $n8n_base_url     = getenv('BASE_URL');
-// Em ../configuracoes/config.php
-define('APP_SIGNATURE_SECRET', '176381fdef3b5e0ff3e59fe0c1c89470c5d683a257ba229fda409a33a352c604');
 
 // Define como constantes
 define('N8N_BASE_URL', $webhook_base_url);
@@ -26,6 +24,9 @@ define('API_TOKEN', $n8n_api_key);
 define('API_SECRET', $n8n_secret_key);
 define('N8N_JWT_SECRET', $n8n_jwt_key);
 define('BASE_URL', $n8n_base_url);
+
+// Assinatura digital
+define('APP_SIGNATURE_SECRET', '176381fdef3b5e0ff3e59fe0c1c89470c5d683a257ba229fda409a33a352c604');
 
 try {
     // 1. Conexão de ESCRITA (Master - Aponta para o IP da Tailscale de Gravação)
