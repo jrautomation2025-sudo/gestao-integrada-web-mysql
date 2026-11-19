@@ -5,6 +5,53 @@ require_once '../configuracoes/config.php';
 session_start(); // Assegura que a sessão está ativa para verificar o login do adm
 
 // ==========================================
+// FUNÇÕES AUXILIARES DE AUDITORIA E ASSINATURA
+// ==========================================
+function obterIpCliente(): string {
+    $candidatos = [];
+
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        $candidatos[] = $_SERVER['HTTP_CF_CONNECTING_IP'];
+    }
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        foreach (explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']) as $ip) {
+            $candidatos[] = trim($ip);
+        }
+    }
+    if (!empty($_SERVER['REMOTE_ADDR'])) {
+        $candidatos[] = $_SERVER['REMOTE_ADDR'];
+    }
+
+    foreach ($candidatos as $ip) {
+        if (filter_var($ip, FILTER_VALIDATE_IP)) {
+            return $ip;
+        }
+    }
+
+    return '0.0.0.0';
+}
+
+function gerarEvidenciaAssinatura(array $dados): array {
+    $codigo = bin2hex(random_bytes(16));
+    $timestampUtc = gmdate('Y-m-d\TH:i:s\Z');
+
+    $payload = json_encode([
+        'codigo_assinatura' => $codigo,
+        'assinado_em_utc'   => $timestampUtc,
+        'dados'             => $dados
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+    $secret = defined('APP_SIGNATURE_SECRET') ? APP_SIGNATURE_SECRET : '';
+    $hash = hash_hmac('sha256', (string)$payload, $secret);
+
+    return [
+        'codigo_assinatura' => $codigo,
+        'assinado_em_utc'   => $timestampUtc,
+        'hash_assinatura'   => $hash
+    ];
+}
+
+// ==========================================
 // VALIDAÇÃO INICIAL DA PÁGINA & COOKIE DE BLOQUEIO
 // ==========================================
 $token = $_GET['token'] ?? '';
@@ -15,29 +62,26 @@ if (empty($token)) {
 
 $stmt = $pdo_read->prepare("SELECT * FROM chancelaria_sessoes WHERE token_presenca = ?");
 $stmt->execute([$token]);
-$sessao = $stmt->fetch();
+$sessao = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$sessao) {
     die("<div style='background:#141724; color:#fff; padding:40px; text-align:center; font-family:Inter;'><h3>Sessão não encontrada.</h3></div>");
 }
 
-$sessao_id = $sessao['id'];
-$tenant_id = $sessao['tenant_id'];
+$sessao_id = (int)$sessao['id'];
+$tenant_id = (int)$sessao['tenant_id'];
 
 // Verifica se quem está acessando é o Administrador/Gestor logado no painel
 $is_admin_logado = isset($_SESSION['chanceler_logado']) || isset($_SESSION['tenant_id']) || (isset($_SESSION['is_admin']) && $_SESSION['is_admin'] == 1);
 
 // ==========================================
-// NOVA TRAVA: DATA DA SESSÃO E HORÁRIO (19:00)
+// TRAVA: DATA DA SESSÃO E HORÁRIO
 // ==========================================
 $erro_bloqueio_tempo = "";
+$data_sessao = $sessao['data'] ?? $sessao['data_sessao'] ?? date('Y-m-d');
+$hora_sessao = $sessao['hora_sessao'] ?? '19:00:00';
 
 if (!$is_admin_logado) {
-    // Supondo que a coluna de data na sua tabela se chame 'data' ou 'data_sessao'. 
-    // Ajuste abaixo caso o nome da coluna no banco seja diferente (ex: $sessao['data_sessao'])
-    $data_sessao = $sessao['data'] ?? $sessao['data_sessao'] ?? date('Y-m-d');
-    $hora_sessao = $sessao['hora_sessao'] ?? date('H:i');
-    
     $data_atual = date('Y-m-d');
     $hora_atual = date('H:i:s');
     $hora_limite = date('H:i:s', strtotime($hora_sessao . ' -1 hour'));
@@ -45,7 +89,7 @@ if (!$is_admin_logado) {
     if ($data_atual < $data_sessao) {
         $erro_bloqueio_tempo = "O check-in para esta sessão só estará disponível no dia " . date('d/m/Y', strtotime($data_sessao)) . ".";
     } elseif ($data_atual === $data_sessao && $hora_atual < $hora_limite) {
-        $erro_bloqueio_tempo = "O check-in só será liberado a partir das ". date('H:i:s', strtotime($hora_limite)) . " horas do dia da sessão.";
+        $erro_bloqueio_tempo = "O check-in só será liberado a partir das " . date('H:i:s', strtotime($hora_limite)) . " horas do dia da sessão.";
     }
 }
 
@@ -63,10 +107,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
         ob_end_clean();
     }
     ob_start();
-    
+
     header('Content-Type: application/json; charset=utf-8');
 
-    // Se houver bloqueio de tempo, impede a busca via AJAX para usuários comuns
     if (!empty($erro_bloqueio_tempo)) {
         echo json_encode(['status' => 'erro', 'mensagem' => $erro_bloqueio_tempo]);
         exit;
@@ -96,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
 
     if ($acao === 'buscar_visitante') {
         $termo = trim($_POST['termo'] ?? '');
-        $stmt = $pdo_read->prepare("SELECT * FROM chancelaria_visitantes WHERE (cim = ? OR nome LIKE ?) AND tenant_id = ? LIMIT 1");
+        $stmt = $pdo_read->prepare("SELECT * FROM chancelaria_visitantes WHERE (cim = ? OR nome LIKE ?) AND tenant_id = ? ORDER BY id DESC LIMIT 1");
         $stmt->execute([$termo, "%$termo%", $tenant_id]);
         $visitante = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -109,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
     }
 }
 
-$presença = 'P';
+$presenca = 'P';
 
 // ==========================================
 // PROCESSAMENTO DO FORMULÁRIO COMUM (POST)
@@ -117,51 +160,155 @@ $presença = 'P';
 $msg = "";
 $erro = "";
 $sucesso_registro = false;
+$comprovante_assinatura = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
     if (!empty($erro_bloqueio_tempo)) {
         $erro = $erro_bloqueio_tempo;
     } elseif ($ja_registrado_cookie) {
         $erro = "Este dispositivo já registrou presença nesta sessão.";
+    } elseif (!isset($_POST['termo_aceite'])) {
+        $erro = "É obrigatório marcar a confirmação de presença e assinatura eletrônica.";
     } else {
         $tipo = $_POST['tipo_presenca'] ?? '';
+        $ipCliente = obterIpCliente();
+        $userAgent = substr($_SERVER['HTTP_USER_AGENT'] ?? 'desconhecido', 0, 255);
 
-        if ($tipo === 'obreiro') {
-            $obreiro_id = $_POST['obreiro_id'] ?? '';
-            if (!empty($obreiro_id)) {
-                $stmtCheck = $pdo_read->prepare("SELECT id FROM chancelaria_presencas WHERE sessao_id = ? AND membro_id = ?");
+        try {
+            $pdo_write->beginTransaction();
+
+            if ($tipo === 'obreiro') {
+                $obreiro_id = (int)($_POST['obreiro_id'] ?? 0);
+                if ($obreiro_id <= 0) {
+                    throw new RuntimeException("Obreiro inválido.");
+                }
+
+                $stmtCheck = $pdo_write->prepare("SELECT id FROM chancelaria_presencas WHERE sessao_id = ? AND membro_id = ? FOR UPDATE");
                 $stmtCheck->execute([$sessao_id, $obreiro_id]);
+
                 if ($stmtCheck->fetch()) {
+                    $pdo_write->rollBack();
                     $erro = "Presença já registrada para este obreiro!";
                 } else {
-                    $stmtIns = $pdo_write->prepare("INSERT INTO chancelaria_presencas (tenant_id, sessao_id, membro_id, status_presenca) VALUES (?, ?, ?, ?)");
-                    $stmtIns->execute([$tenant_id, $sessao_id, $obreiro_id, $presença]);
-                    $msg = "Presença confirmada com sucesso!";
+                    $evidencia = gerarEvidenciaAssinatura([
+                        'tipo_presenca' => 'obreiro',
+                        'tenant_id'     => $tenant_id,
+                        'sessao_id'     => $sessao_id,
+                        'membro_id'     => $obreiro_id,
+                        'status'        => $presenca,
+                        'ip_origem'     => $ipCliente,
+                        'user_agent'    => $userAgent
+                    ]);
+
+                    $stmtIns = $pdo_write->prepare("
+                        INSERT INTO chancelaria_presencas (
+                            tenant_id, sessao_id, membro_id, status_presenca,
+                            codigo_assinatura, hash_assinatura, assinado_em_utc,
+                            ip_origem, user_agent, termo_aceite, nivel_assinatura
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'AVANCADA')
+                    ");
+                    $stmtIns->execute([
+                        $tenant_id,
+                        $sessao_id,
+                        $obreiro_id,
+                        $presenca,
+                        $evidencia['codigo_assinatura'],
+                        $evidencia['hash_assinatura'],
+                        $evidencia['assinado_em_utc'],
+                        $ipCliente,
+                        $userAgent
+                    ]);
+
+                    $pdo_write->commit();
+                    $comprovante_assinatura = $evidencia;
+                    $msg = "Presença confirmada e assinada eletronicamente com sucesso!";
                     $sucesso_registro = true;
                 }
+            } elseif ($tipo === 'visitante') {
+                $nome = trim($_POST['nome'] ?? '');
+                $cim_visitante = trim($_POST['cim_visitante'] ?? '');
+                $loja_origem = trim($_POST['loja_origem'] ?? '');
+                $oriente = trim($_POST['oriente'] ?? '');
+                $potencia = trim($_POST['potencia'] ?? '');
+                $cargo = trim($_POST['cargo'] ?? '');
+                $telefone = trim($_POST['telefone'] ?? '');
+                $email = trim($_POST['email'] ?? '');
+
+                if ($nome === '' || $cim_visitante === '' || $loja_origem === '') {
+                    throw new RuntimeException("Preencha os campos obrigatórios do visitante.");
+                }
+
+                $stmtCad = $pdo_write->prepare("
+                    INSERT INTO chancelaria_visitantes (
+                        tenant_id, sessao_id, nome, cim, grau, loja_origem,
+                        oriente, potencia, telefone, email, ip_origem, user_agent, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                ");
+                $stmtCad->execute([
+                    $tenant_id,
+                    $sessao_id,
+                    $nome,
+                    $cim_visitante,
+                    $cargo,
+                    $loja_origem,
+                    $oriente,
+                    $potencia,
+                    $telefone ?: null,
+                    $email ?: null,
+                    $ipCliente,
+                    $userAgent
+                ]);
+                $visitanteId = (int)$pdo_write->lastInsertId();
+
+                $evidencia = gerarEvidenciaAssinatura([
+                    'tipo_presenca' => 'visitante',
+                    'tenant_id'     => $tenant_id,
+                    'sessao_id'     => $sessao_id,
+                    'visitante_id'  => $visitanteId,
+                    'cim_visitante' => $cim_visitante,
+                    'nome'          => $nome,
+                    'status'        => $presenca,
+                    'ip_origem'     => $ipCliente,
+                    'user_agent'    => $userAgent
+                ]);
+
+                // Grava na tabela unificada de presenças se a coluna visitante_id existir
+                $stmtInsPres = $pdo_write->prepare("
+                    INSERT INTO chancelaria_presencas (
+                        tenant_id, sessao_id, membro_id, visitante_id, status_presenca,
+                        codigo_assinatura, hash_assinatura, assinado_em_utc,
+                        ip_origem, user_agent, termo_aceite, nivel_assinatura
+                    ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, 1, 'AVANCADA')
+                ");
+                $stmtInsPres->execute([
+                    $tenant_id,
+                    $sessao_id,
+                    $visitanteId,
+                    $presenca,
+                    $evidencia['codigo_assinatura'],
+                    $evidencia['hash_assinatura'],
+                    $evidencia['assinado_em_utc'],
+                    $ipCliente,
+                    $userAgent
+                ]);
+
+                $pdo_write->commit();
+                $comprovante_assinatura = $evidencia;
+                $msg = "Visitante cadastrado e presença assinada eletronicamente com sucesso!";
+                $sucesso_registro = true;
+            } else {
+                throw new RuntimeException("Tipo de presença inválido.");
             }
-        } elseif ($tipo === 'visitante') {
-            $nome = trim($_POST['nome'] ?? '');
-            $cim_visitante = trim($_POST['cim_visitante'] ?? '');
-            $loja_origem = trim($_POST['loja_origem'] ?? '');
-            $oriente = trim($_POST['oriente'] ?? '');
-            $potencia = trim($_POST['potencia'] ?? '');
-            $cargo = trim($_POST['cargo'] ?? '');
-            $telefone = trim($_POST['telefone'] ?? '');
-            $email = trim($_POST['email'] ?? '');
 
-            // Insere o visitante vinculado à sessão atual
-            $stmtCad = $pdo_write->prepare("INSERT INTO chancelaria_visitantes (tenant_id, sessao_id, nome, cim, grau, loja_origem, oriente, potencia, telefone, email, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmtCad->execute([$tenant_id, $sessao_id, $nome, $cim_visitante, $cargo, $loja_origem, $oriente, $potencia, $telefone ?: null, $email ?: null]);
-            
-            $msg = "Visitante cadastrado e presença registrada com sucesso!";
-            $sucesso_registro = true;
-        }
-
-        // Se ocorreu com sucesso e NÃO é o admin, criamos o cookie para travar o dispositivo comum
-        if ($sucesso_registro && !$is_admin_logado) {
-            setcookie($cookie_nome, "true", time() + 86400, "/");
-            $ja_registrado_cookie = true;
+            if ($sucesso_registro && !$is_admin_logado) {
+                setcookie($cookie_nome, "true", time() + 86400, "/");
+                $ja_registrado_cookie = true;
+            }
+        } catch (Throwable $e) {
+            if ($pdo_write->inTransaction()) {
+                $pdo_write->rollBack();
+            }
+            $erro = $e->getMessage() ?: "Erro ao registrar presença.";
         }
     }
 }
@@ -184,6 +331,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
         .form-control:focus, .form-select:focus { background-color: #141724; border-color: #f5c041; color: #fff; box-shadow: none; }
         .nav-pills .nav-link.active { background-color: #f5c041; color: #141724; font-weight: bold; }
         .nav-pills .nav-link { color: #8b92a5; }
+        .comprovante-box { background-color: #141724; border: 1px dashed #f5c041; border-radius: 8px; padding: 12px; font-size: 0.78rem; word-break: break-all; }
     </style>
 </head>
 <body>
@@ -193,8 +341,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
         <i class="fas fa-book-open text-warning mb-2" style="font-size: 2.5rem;"></i>
         <h3 style="font-family: 'Cinzel', serif; color: #f5c041;">Registro de Frequência</h3>
         <p class="text-white small"><?= htmlspecialchars($sessao['titulo'] ?? 'Reunião') ?></p>
-        <?php if (isset($data_sessao)): ?>
-            <p class="text-muted small mb-0"><i class="far fa-calendar-alt me-1"></i> Data da Sessão: <?= date('d/m/Y', strtotime($data_sessao)) ?> às 19:00</p>
+        <?php if (!empty($data_sessao)): ?>
+            <p class="text-muted small mb-0">
+                <i class="far fa-calendar-alt me-1"></i>
+                Data da Sessão: <?= date('d/m/Y', strtotime($data_sessao)) ?> às <?= htmlspecialchars(substr((string)$hora_sessao, 0, 5)) ?>
+            </p>
         <?php endif; ?>
         <?php if ($is_admin_logado): ?>
             <div><span class="badge bg-warning text-dark mt-2">Modo Administrador (Acesso Livre)</span></div>
@@ -202,30 +353,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
     </div>
 
     <?php if (!empty($msg)): ?>
-        <div class="alert alert-success text-center" role="alert"><i class="fas fa-check-circle me-2"></i> <?= $msg ?></div>
+        <div class="alert alert-success text-center" role="alert">
+            <i class="fas fa-check-circle me-2"></i> <?= htmlspecialchars($msg) ?>
+        </div>
     <?php endif; ?>
 
     <?php if (!empty($erro)): ?>
-        <div class="alert alert-danger text-center" role="alert"><i class="fas fa-exclamation-triangle me-2"></i> <?= $erro ?></div>
+        <div class="alert alert-danger text-center" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i> <?= htmlspecialchars($erro) ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($comprovante_assinatura): ?>
+        <div class="comprovante-box mb-3 text-start">
+            <div class="text-warning fw-bold mb-1"><i class="fas fa-shield-alt me-1"></i> Comprovante de Assinatura Eletrônica</div>
+            <div><strong>Código:</strong> <?= htmlspecialchars($comprovante_assinatura['codigo_assinatura']) ?></div>
+            <div><strong>Data/Hora UTC:</strong> <?= htmlspecialchars($comprovante_assinatura['assinado_em_utc']) ?></div>
+            <div><strong>Hash SHA-256:</strong> <?= htmlspecialchars($comprovante_assinatura['hash_assinatura']) ?></div>
+        </div>
     <?php endif; ?>
 
     <div class="card-custom">
         <?php if (!empty($erro_bloqueio_tempo)): ?>
-            <!-- TELA DE BLOQUEIO POR ANTECIPAÇÃO (Data ou Horário) -->
             <div class="text-center py-4">
                 <i class="fas fa-clock text-warning mb-3" style="font-size: 3rem;"></i>
                 <h5 class="text-warning mb-2">Check-in Indisponível</h5>
-                <p class="text-white small mb-0"><?= $erro_bloqueio_tempo ?></p>
+                <p class="text-white small mb-0"><?= htmlspecialchars($erro_bloqueio_tempo) ?></p>
             </div>
         <?php elseif ($ja_registrado_cookie): ?>
-            <!-- TELA DE BLOQUEIO SE JÁ REGISTRADO (Apenas para usuários comuns) -->
             <div class="text-center py-4">
                 <i class="fas fa-check-circle text-success mb-3" style="font-size: 3rem;"></i>
                 <h5 class="text-warning mb-2">Presença já confirmada</h5>
-                <p class="text-white small mb-0">Sua frequência para esta sessão já foi registrada neste dispositivo. O acesso a novos registros foi bloqueado.</p>
+                <p class="text-white small mb-0">Sua frequência para esta sessão já foi registrada neste dispositivo.</p>
             </div>
         <?php else: ?>
-            <!-- FORMULÁRIOS NORMAIS -->
             <ul class="nav nav-pills nav-fill mb-4" id="pills-tab" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="pills-obreiro-tab" data-bs-toggle="pill" data-bs-target="#pills-obreiro" type="button" role="tab">Sou da Loja</button>
@@ -236,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
             </ul>
 
             <div class="tab-content" id="pills-tabContent">
-                <!-- AB: OBREIRO DA CASA -->
+                <!-- ABA: OBREIRO DA CASA -->
                 <div class="tab-pane fade show active" id="pills-obreiro" role="tabpanel">
                     <div class="mb-3">
                         <label class="form-label text-white small">Digite o seu CIM</label>
@@ -257,17 +418,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                         <form method="POST">
                             <input type="hidden" name="tipo_presenca" value="obreiro">
                             <input type="hidden" name="obreiro_id" id="inputObreiroId">
-                            <button type="submit" class="btn btn-gold w-100 py-2">Confirmar Minha Presença</button>
+
+                            <div class="form-check mb-3 text-start">
+                                <input class="form-check-input" type="checkbox" name="termo_aceite" value="1" id="aceiteObreiro" required>
+                                <label class="form-check-label small text-white" for="aceiteObreiro">
+                                    Declaro estar presente nesta sessão e assino eletronicamente este registro de frequência.
+                                </label>
+                            </div>
+
+                            <button type="submit" class="btn btn-gold w-100 py-2">Confirmar e Assinar Presença</button>
                         </form>
                     </div>
                 </div>
 
-                <!-- AB: VISITANTE -->
+                <!-- ABA: VISITANTE -->
                 <div class="tab-pane fade" id="pills-visitante" role="tabpanel">
                     <div class="mb-3">
                         <label class="form-label text-white small">Pesquisar por CIM ou Nome (Caso já tenha visitado antes)</label>
                         <div class="input-group">
-                            <input type="tel" id="inputBuscaVisitante" class="form-control" oninput="this.value = this.value.replace(/\D/g, '')" placeholder="Digite CIM ou Nome...">
+                            <input type="text" id="inputBuscaVisitante" class="form-control" placeholder="Digite CIM ou Nome...">
                             <button class="btn btn-outline-warning" type="button" onclick="buscarVisitante()">Verificar</button>
                         </div>
                     </div>
@@ -275,7 +444,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                     <form method="POST" id="formVisitante">
                         <input type="hidden" name="tipo_presenca" value="visitante">
                         <input type="hidden" name="visitante_id" id="inputVisitanteId" value="">
-                        
+
                         <div class="mb-3">
                             <label class="form-label text-white small">Nome Completo</label>
                             <input type="text" name="nome" id="visNome" class="form-control" placeholder="Seu nome completo" required>
@@ -286,7 +455,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-white small">Loja de Origem</label>
-                            <input type="text" name="loja_origem" id="visLoja" class="form-control" placeholder="Ex: Acácia Negra nº 15" required>
+                            <input type="text" name="loja_origem" id="visLoja" class="form-control" placeholder="Ex: Fraternidade Carpinense nº 4028" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-white small">Oriente</label>
@@ -294,7 +463,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-white small">Potência / Obediência</label>
-                            <input type="text" name="potencia" id="visPotencia" class="form-control" placeholder="Ex: GOB, GLP..." required>
+                            <input type="text" name="potencia" id="visPotencia" class="form-control" placeholder="Ex: GOB, GOPE..." required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-white small">Grau / Cargo</label>
@@ -314,7 +483,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                             <label class="form-label text-white small">E-mail (Para receber certificado)</label>
                             <input type="email" name="email" id="visEmail" class="form-control" placeholder="seu@email.com">
                         </div>
-                        <button type="submit" id="btnSalvarVisitante" class="btn btn-gold w-100 py-2 mt-2">Cadastrar e Registrar Presença</button>
+
+                        <div class="form-check mb-3 text-start">
+                            <input class="form-check-input" type="checkbox" name="termo_aceite" value="1" id="aceiteVisitante" required>
+                            <label class="form-check-label small text-white" for="aceiteVisitante">
+                                Declaro estar presente nesta sessão e assino eletronicamente este registro de frequência.
+                            </label>
+                        </div>
+
+                        <button type="submit" id="btnSalvarVisitante" class="btn btn-gold w-100 py-2 mt-2">Cadastrar e Assinar Presença</button>
                     </form>
                 </div>
             </div>
@@ -370,7 +547,7 @@ function buscarVisitante() {
     .then(data => {
         if (data.status === 'encontrado') {
             document.getElementById('inputVisitanteId').value = data.dados.id;
-            document.getElementById('visNome').value = data.dados.nome;
+            document.getElementById('visNome').value = data.dados.nome || '';
             document.getElementById('visCim').value = data.dados.cim || '';
             document.getElementById('visLoja').value = data.dados.loja_origem || '';
             document.getElementById('visOriente').value = data.dados.oriente || '';
@@ -378,15 +555,15 @@ function buscarVisitante() {
             document.getElementById('visCargo').value = data.dados.grau || '';
             document.getElementById('visTelefone').value = data.dados.telefone || '';
             document.getElementById('visEmail').value = data.dados.email || '';
-            
+
             alert("Visitante encontrado na base! Dados carregados com sucesso.");
-            document.getElementById('btnSalvarVisitante').innerText = "Confirmar Presença (Visitante Cadastrado)";
+            document.getElementById('btnSalvarVisitante').innerText = "Confirmar e Assinar Presença";
         } else {
             alert("Visitante não encontrado. Preencha o formulário abaixo para realizar o cadastro.");
             document.getElementById('inputVisitanteId').value = '';
             document.getElementById('inputBuscaVisitante').value = '';
             document.getElementById('formVisitante').reset();
-            document.getElementById('btnSalvarVisitante').innerText = "Cadastrar e Registrar Presença";
+            document.getElementById('btnSalvarVisitante').innerText = "Cadastrar e Assinar Presença";
         }
     })
     .catch(err => console.error("Erro na requisição:", err));
