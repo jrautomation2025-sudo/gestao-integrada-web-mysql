@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao_ajax'])) {
     }
 }
 
-$presenca = 'P';
+$presença = 'P';
 
 // ==========================================
 // PROCESSAMENTO DO FORMULÁRIO COMUM (POST)
@@ -195,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                         'tenant_id'     => $tenant_id,
                         'sessao_id'     => $sessao_id,
                         'membro_id'     => $obreiro_id,
-                        'status'        => $presenca,
+                        'status'        => $presença,
                         'ip_origem'     => $ipCliente,
                         'user_agent'    => $userAgent
                     ]);
@@ -211,7 +211,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                         $tenant_id,
                         $sessao_id,
                         $obreiro_id,
-                        $presenca,
+                        $presença,
                         $evidencia['codigo_assinatura'],
                         $evidencia['hash_assinatura'],
                         $evidencia['assinado_em_utc'],
@@ -267,24 +267,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                     'visitante_id'  => $visitanteId,
                     'cim_visitante' => $cim_visitante,
                     'nome'          => $nome,
-                    'status'        => $presenca,
+                    'status'        => $presença,
                     'ip_origem'     => $ipCliente,
                     'user_agent'    => $userAgent
                 ]);
 
-                // Grava na tabela unificada de presenças se a coluna visitante_id existir
                 $stmtInsPres = $pdo_write->prepare("
                     INSERT INTO chancelaria_presencas (
-                        tenant_id, sessao_id, membro_id, visitante_id, status_presenca,
+                        tenant_id, sessao_id, membro_id, visitante_id,
+                        snapshot_nome, snapshot_cim, status_presenca,
                         codigo_assinatura, hash_assinatura, assinado_em_utc,
                         ip_origem, user_agent, termo_aceite, nivel_assinatura
-                    ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, 1, 'AVANCADA')
+                    ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'AVANCADA')
                 ");
                 $stmtInsPres->execute([
                     $tenant_id,
                     $sessao_id,
                     $visitanteId,
-                    $presenca,
+                    $nome,
+                    $cim_visitante,
+                    $presença,
                     $evidencia['codigo_assinatura'],
                     $evidencia['hash_assinatura'],
                     $evidencia['assinado_em_utc'],
