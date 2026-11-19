@@ -344,7 +344,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
         <h3 style="font-family: 'Cinzel', serif; color: #f5c041;">Registro de Frequência</h3>
         <p class="text-white small"><?= htmlspecialchars($sessao['titulo'] ?? 'Reunião') ?></p>
         <?php if (!empty($data_sessao)): ?>
-            <p class="text-muted small mb-0">
+            <p class="text-white small mb-0">
                 <i class="far fa-calendar-alt me-1"></i>
                 Data da Sessão: <?= date('d/m/Y', strtotime($data_sessao)) ?> às <?= htmlspecialchars(substr((string)$hora_sessao, 0, 5)) ?>
             </p>
