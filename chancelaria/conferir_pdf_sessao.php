@@ -23,7 +23,7 @@ $colunaHashBanco = match ($escopoSelecionado) {
 
 // Carrega dados da sessão se sessao_id foi informado
 $stmtSessoes = $pdo_read->query("
-    SELECT id, titulo, COALESCE(data, data_sessao) AS data_ref,
+    SELECT id, titulo, data_sessao AS data_ref,
            hash_pdf_completa, hash_pdf_membros, hash_pdf_visitantes, lista_emitida_em
     FROM chancelaria_sessoes
     ORDER BY id DESC
@@ -33,7 +33,7 @@ $listaSessoes = $stmtSessoes->fetchAll(PDO::FETCH_ASSOC);
 
 if ($sessaoId > 0) {
     $stmt = $pdo_read->prepare("
-        SELECT id, tenant_id, titulo, COALESCE(data, data_sessao) AS data_ref, hora_sessao,
+        SELECT id, tenant_id, titulo, data_sessao AS data_ref, hora_sessao,
                lista_emitida, lista_emitida_em,
                hash_pdf_completa, hash_pdf_membros, hash_pdf_visitantes
         FROM chancelaria_sessoes
