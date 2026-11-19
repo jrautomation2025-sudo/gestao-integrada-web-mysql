@@ -2,7 +2,7 @@
 //ini_set('display_errors', 1);
 //error_reporting(E_ALL);
 require_once '../configuracoes/config.php';
-require_once '../vendor/tecnickcom/tcpdf/tcpdf.php'; // Ajuste o caminho do TCPDF se necessário
+require_once '../configuracoes/vendor/tecnickcom/tcpdf/tcpdf.php'; // Ajuste o caminho do TCPDF se necessário
 
 $sessao_id = (int)($_GET['sessao_id'] ?? 0);
 if ($sessao_id <= 0) {
