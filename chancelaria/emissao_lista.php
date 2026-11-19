@@ -8,7 +8,7 @@ if ($sessao_id <= 0) {
 }
 
 $stmt = $pdo_read->prepare("
-    SELECT id, titulo, COALESCE(data, data_sessao) AS data_ref, hora_sessao
+    SELECT id, titulo, COALESCE(data, data_sessao) AS data_ref, hora_sessao, lista_emitida, lista_emitida_em
     FROM chancelaria_sessoes
     WHERE id = ?
     LIMIT 1
@@ -20,7 +20,6 @@ if (!$sessao) {
     die("Sessão não encontrada.");
 }
 
-// Contadores para orientar o chanceler antes de emitir
 $stmtCount = $pdo_read->prepare("
     SELECT
         COUNT(*) AS total,
@@ -58,6 +57,12 @@ $totais = $stmtCount->fetch(PDO::FETCH_ASSOC);
         <?= !empty($sessao['data_ref']) ? date('d/m/Y', strtotime($sessao['data_ref'])) : '' ?>
     </p>
 
+    <?php if ((int)$sessao['lista_emitida'] === 1): ?>
+        <div class="alert alert-warning small py-2">
+            <i class="fas fa-lock me-1"></i> Lista já emitida em <?= !empty($sessao['lista_emitida_em']) ? date('d/m/Y H:i', strtotime($sessao['lista_emitida_em'])) : '' ?>. Novos check-ins públicos estão bloqueados.
+        </div>
+    <?php endif; ?>
+
     <div class="row text-center g-2 mb-4">
         <div class="col-4">
             <div class="p-2 rounded bg-dark border border-secondary">
@@ -79,7 +84,7 @@ $totais = $stmtCount->fetch(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <form id="formFiltroPdf" method="GET" action="gerar_lista_pdf.php" target="_blank">
+    <form method="GET" action="gerar_lista_pdf.php" target="_blank">
         <input type="hidden" name="sessao_id" value="<?= (int)$sessao_id ?>">
 
         <div class="mb-4">
