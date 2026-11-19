@@ -8,7 +8,7 @@ if ($sessao_id <= 0) {
 }
 
 $stmt = $pdo_read->prepare("
-    SELECT id, titulo, COALESCE(data, data_sessao) AS data_ref, hora_sessao, lista_emitida, lista_emitida_em
+    SELECT id, titulo, data_sessao AS data_ref, hora_sessao, lista_emitida, lista_emitida_em
     FROM chancelaria_sessoes
     WHERE id = ?
     LIMIT 1
