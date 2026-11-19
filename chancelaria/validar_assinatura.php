@@ -18,13 +18,22 @@ function recalcularHashAssinatura(array $registro): string {
             'user_agent'    => (string)$registro['user_agent']
         ];
     } else {
+        // Prioriza os snapshots imutáveis gravados no ato da assinatura (fallback para registros antigos)
+        $nomeSnapshot = !empty($registro['snapshot_nome'])
+            ? (string)$registro['snapshot_nome']
+            : (string)($registro['vis_nome'] ?? '');
+
+        $cimSnapshot = !empty($registro['snapshot_cim'])
+            ? (string)$registro['snapshot_cim']
+            : (string)($registro['vis_cim'] ?? '');
+
         $dados = [
             'tipo_presenca' => 'visitante',
             'tenant_id'     => (int)$registro['tenant_id'],
             'sessao_id'     => (int)$registro['sessao_id'],
             'visitante_id'  => (int)$registro['visitante_id'],
-            'cim_visitante' => (string)$registro['vis_cim'],
-            'nome'          => (string)$registro['vis_nome'],
+            'cim_visitante' => $cimSnapshot,
+            'nome'          => $nomeSnapshot,
             'status'        => (string)$registro['status_presenca'],
             'ip_origem'     => (string)$registro['ip_origem'],
             'user_agent'    => (string)$registro['user_agent']
@@ -174,8 +183,13 @@ if ($codigo !== '') {
     <?php elseif ($statusValidacao === 'valido' && $resultado): ?>
         <?php
             $isObreiro = !empty($resultado['membro_id']);
-            $nomeSignatario = $isObreiro ? $resultado['membro_nome'] : $resultado['vis_nome'];
-            $cimSignatario = $isObreiro ? $resultado['membro_cim'] : $resultado['vis_cim'];
+            $nomeSignatario = $isObreiro
+                ? $resultado['membro_nome']
+                : (!empty($resultado['snapshot_nome']) ? $resultado['snapshot_nome'] : $resultado['vis_nome']);
+            $cimSignatario = $isObreiro
+                ? $resultado['membro_cim']
+                : (!empty($resultado['snapshot_cim']) ? $resultado['snapshot_cim'] : $resultado['vis_cim']);
+
             $dataFormatada = !empty($resultado['sessao_data']) ? date('d/m/Y', strtotime($resultado['sessao_data'])) : '-';
             $horaFormatada = !empty($resultado['sessao_hora']) ? substr((string)$resultado['sessao_hora'], 0, 5) : '-';
         ?>
