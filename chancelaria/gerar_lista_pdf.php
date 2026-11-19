@@ -82,18 +82,33 @@ $stmtPres = $pdo_read->prepare($sqlPresencas);
 $stmtPres->execute([$sessao_id, $tenant_id]);
 $presencas = $stmtPres->fetchAll(PDO::FETCH_ASSOC);
 
-// 4. Carrega certificado digital A1 (.pfx)
-$pfxConteudo = @file_get_contents(ICP_CERT_PFX_PATH);
-$certs = [];
-if ($pfxConteudo === false || !openssl_pkcs12_read($pfxConteudo, $certs, ICP_CERT_PFX_PASS)) {
-    die("Falha ao carregar o certificado digital A1 (.pfx). Verifique caminho e senha no config.php.");
+// 4. Tenta carregar certificado digital A1 (.pfx) opcionalmente
+$assinaturaPfxAplicada = false;
+$statusPfxTexto = "Sem certificado A1 (.pfx) configurado — Manifesto HMAC-SHA256 ativo";
+$certPem = '';
+$pkeyPem = '';
+$extraCertsPem = '';
+
+$pfxPath = defined('ICP_CERT_PFX_PATH') ? (string)ICP_CERT_PFX_PATH : '';
+$pfxPass = defined('ICP_CERT_PFX_PASS') ? (string)ICP_CERT_PFX_PASS : '';
+
+if ($pfxPath !== '' && is_readable($pfxPath)) {
+    $pfxConteudo = @file_get_contents($pfxPath);
+    $certs = [];
+    if ($pfxConteudo !== false && openssl_pkcs12_read($pfxConteudo, $certs, $pfxPass)) {
+        $certPem = $certs['cert'] ?? '';
+        $pkeyPem = $certs['pkey'] ?? '';
+        $extraCertsPem = !empty($certs['extracerts']) ? implode("\n", $certs['extracerts']) : '';
+        if ($certPem !== '' && $pkeyPem !== '') {
+            $assinaturaPfxAplicada = true;
+            $statusPfxTexto = "Assinado digitalmente com Certificado A1 (.pfx / ICP-Brasil)";
+        }
+    } else {
+        $statusPfxTexto = "Certificado A1 (.pfx) encontrado, mas não foi possível abrir (verifique senha)";
+    }
 }
 
-$certPem = $certs['cert'];
-$pkeyPem = $certs['pkey'];
-$extraCertsPem = !empty($certs['extracerts']) ? implode("\n", $certs['extracerts']) : '';
-
-// 5. Instancia TCPDF e assina digitalmente
+// 5. Instancia TCPDF
 $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
 $pdf->SetCreator('Chancelaria - Gestão Integrada');
 $pdf->SetAuthor('Loja Maçônica / Chancelaria');
@@ -104,13 +119,15 @@ $pdf->SetMargins(12, 14, 12);
 $pdf->SetAutoPageBreak(true, 15);
 $pdf->AddPage();
 
-$infoAssinatura = [
-    'Name'        => 'Chancelaria / Presidência da Sessão',
-    'Location'    => 'Carpina, PE - Brasil',
-    'Reason'      => 'Lista de Presença (' . $rotuloFiltro . ') e Manifesto de Assinaturas',
-    'ContactInfo' => 'Chancelaria Oficial'
-];
-$pdf->setSignature($certPem, $pkeyPem, '', $extraCertsPem, 2, $infoAssinatura);
+if ($assinaturaPfxAplicada) {
+    $infoAssinatura = [
+        'Name'        => 'Chancelaria / Presidência da Sessão',
+        'Location'    => 'Carpina, PE - Brasil',
+        'Reason'      => 'Lista de Presença (' . $rotuloFiltro . ') e Manifesto de Assinaturas',
+        'ContactInfo' => 'Chancelaria Oficial'
+    ];
+    $pdf->setSignature($certPem, $pkeyPem, '', $extraCertsPem, 2, $infoAssinatura);
+}
 
 $dataSessaoFmt = !empty($sessao['data_ref']) ? date('d/m/Y', strtotime($sessao['data_ref'])) : '-';
 $horaSessaoFmt = !empty($sessao['hora_sessao']) ? substr((string)$sessao['hora_sessao'], 0, 5) : '-';
@@ -120,10 +137,11 @@ $html = '
 <p style="text-align:center; font-size:9.5pt; font-weight:bold; color:#8a6400; margin:2px 0 6px 0;">
     ESCOPO: ' . htmlspecialchars($rotuloFiltro) . '
 </p>
-<p style="text-align:center; font-size:8.8pt; color:#444; margin-top:0;">
+<p style="text-align:center; font-size:8.5pt; color:#444; margin-top:0;">
     <strong>Sessão:</strong> ' . htmlspecialchars((string)($sessao['titulo'] ?? '')) . ' &nbsp;|&nbsp;
     <strong>Data:</strong> ' . htmlspecialchars($dataSessaoFmt) . ' às ' . htmlspecialchars($horaSessaoFmt) . ' &nbsp;|&nbsp;
-    <strong>Registros:</strong> ' . count($presencas) . '
+    <strong>Registros:</strong> ' . count($presencas) . '<br>
+    <strong>Status Criptográfico:</strong> ' . htmlspecialchars($statusPfxTexto) . '
 </p>
 <hr>
 <h4 style="color:#141724; margin-bottom:6px;">1. Relação de Presentes</h4>
@@ -217,12 +235,18 @@ if ($yAtual > 245) {
     $yAtual = 20;
 }
 
+$notaRodape = $assinaturaPfxAplicada
+    ? "Documento assinado digitalmente com certificado ICP-Brasil (A1) — Escopo: " . $rotuloFiltro . ".\nConferência pública via QR Code ou em:\n" . $qrUrl
+    : "Documento com manifesto de integridade HMAC-SHA256 e registro de auditoria — Escopo: " . $rotuloFiltro . ".\nConferência pública via QR Code ou em:\n" . $qrUrl;
+
 $pdf->write2DBarcode($qrUrl, 'QRCODE,M', 12, $yAtual, 28, 28, $styleQr, 'N');
 $pdf->SetXY(44, $yAtual + 2);
 $pdf->SetFont('helvetica', '', 8);
-$pdf->MultiCell(154, 4, "Documento assinado digitalmente com certificado ICP-Brasil (A1) — Escopo: " . $rotuloFiltro . ".\nConferência pública via QR Code ou em:\n" . $qrUrl, 0, 'L');
+$pdf->MultiCell(154, 4, $notaRodape, 0, 'L');
 
-$pdf->setSignatureAppearance(12, $yAtual + 32, 80, 18);
+if ($assinaturaPfxAplicada) {
+    $pdf->setSignatureAppearance(12, $yAtual + 32, 80, 18);
+}
 
 // 6. Salva arquivo temporário, calcula SHA-256 final e trava a sessão no banco
 $nomeArquivo = 'lista_presenca_sessao_' . $sessao_id . '_' . $sufixoArquivo . '.pdf';
