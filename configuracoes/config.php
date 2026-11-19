@@ -27,6 +27,8 @@ define('BASE_URL', $n8n_base_url);
 
 // Assinatura digital
 define('APP_SIGNATURE_SECRET', '176381fdef3b5e0ff3e59fe0c1c89470c5d683a257ba229fda409a33a352c604');
+define('ICP_CERT_PFX_PATH', '/etc/chancelaria/certs/certificado_a1.pfx');
+define('ICP_CERT_PFX_PASS', 'iSvRGAbxMJGVC)Z');
 
 try {
     // 1. Conexão de ESCRITA (Master - Aponta para o IP da Tailscale de Gravação)
