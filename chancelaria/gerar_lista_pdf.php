@@ -2,7 +2,7 @@
 //ini_set('display_errors', 1);
 //error_reporting(E_ALL);
 require_once '../configuracoes/config.php';
-require_once '../vendor/tecnickcom/tcpdf/tcpdf.php';
+require_once '../vendor/tecnickcom/tcpdf/tcpdf.php'; // Ajuste o caminho do TCPDF se necessário
 
 $sessao_id = (int)($_GET['sessao_id'] ?? 0);
 if ($sessao_id <= 0) {
@@ -44,7 +44,7 @@ if (!$sessao) {
 
 $tenant_id = (int)$sessao['tenant_id'];
 
-// 3. Monta query filtrada por tipo de participante
+// 3. Busca presenças filtradas
 $whereFiltro = "";
 if ($filtro === 'membros') {
     $whereFiltro = " AND p.membro_id IS NOT NULL ";
@@ -82,18 +82,18 @@ $stmtPres = $pdo_read->prepare($sqlPresencas);
 $stmtPres->execute([$sessao_id, $tenant_id]);
 $presencas = $stmtPres->fetchAll(PDO::FETCH_ASSOC);
 
-// 4. Extrai certificado A1 (.pfx)
+// 4. Carrega certificado digital A1 (.pfx)
 $pfxConteudo = @file_get_contents(ICP_CERT_PFX_PATH);
 $certs = [];
 if ($pfxConteudo === false || !openssl_pkcs12_read($pfxConteudo, $certs, ICP_CERT_PFX_PASS)) {
-    die("Falha ao carregar o certificado digital A1 (.pfx). Verifique caminho e senha.");
+    die("Falha ao carregar o certificado digital A1 (.pfx). Verifique caminho e senha no config.php.");
 }
 
 $certPem = $certs['cert'];
 $pkeyPem = $certs['pkey'];
 $extraCertsPem = !empty($certs['extracerts']) ? implode("\n", $certs['extracerts']) : '';
 
-// 5. Gera PDF com TCPDF
+// 5. Instancia TCPDF e assina digitalmente
 $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
 $pdf->SetCreator('Chancelaria - Gestão Integrada');
 $pdf->SetAuthor('Loja Maçônica / Chancelaria');
@@ -196,7 +196,8 @@ $html .= '
 
 $pdf->writeHTML($html, true, false, true, false, '');
 
-$urlValidacaoBase = 'https://seu-dominio.com.br/chancelaria/validar_assinatura.php';
+// QR Code apontando para o validador público
+$urlValidacaoBase = 'https://seu-dominio.com.br/chancelaria/validar_assinatura.php'; // Ajuste sua URL
 $primeiroCodigo = $presencas[0]['codigo_assinatura'] ?? '';
 $qrUrl = $urlValidacaoBase . ($primeiroCodigo ? '?codigo=' . urlencode($primeiroCodigo) : '');
 
@@ -223,11 +224,27 @@ $pdf->MultiCell(154, 4, "Documento assinado digitalmente com certificado ICP-Bra
 
 $pdf->setSignatureAppearance(12, $yAtual + 32, 80, 18);
 
+// 6. Salva arquivo temporário, calcula SHA-256 final e trava a sessão no banco
 $nomeArquivo = 'lista_presenca_sessao_' . $sessao_id . '_' . $sufixoArquivo . '.pdf';
 $caminhoArquivo = sys_get_temp_dir() . '/' . $nomeArquivo;
 
 $pdf->Output($caminhoArquivo, 'F');
 $hashPdfFinal = hash_file('sha256', $caminhoArquivo);
+
+$colunaHash = match ($filtro) {
+    'membros'    => 'hash_pdf_membros',
+    'visitantes' => 'hash_pdf_visitantes',
+    default      => 'hash_pdf_completa'
+};
+
+$stmtUpd = $pdo_write->prepare("
+    UPDATE chancelaria_sessoes
+    SET lista_emitida = 1,
+        lista_emitida_em = COALESCE(lista_emitida_em, NOW()),
+        {$colunaHash} = ?
+    WHERE id = ? AND tenant_id = ?
+");
+$stmtUpd->execute([$hashPdfFinal, $sessao_id, $tenant_id]);
 
 header('Content-Type: application/pdf');
 header('Content-Disposition: inline; filename="' . $nomeArquivo . '"');
