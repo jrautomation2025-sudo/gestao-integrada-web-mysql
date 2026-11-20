@@ -2,16 +2,16 @@
 //ini_set('display_errors', 1);
 //error_reporting(E_ALL);
 require_once '../configuracoes/config.php';
-require_once '../configuracoes/vendor/tecnickcom/tcpdf/tcpdf.php'; // Ajuste o caminho do TCPDF se necessário
+require_once '../vendor/tecnickcom/tcpdf/tcpdf.php'; // Ajuste o caminho do TCPDF se necessário
 
-$sessao_id = (int)($_GET['sessao_id'] ?? 0);
+$sessao_id = filter_input(INPUT_GET, 'sessao_id', FILTER_VALIDATE_INT) ?: 0;
 if ($sessao_id <= 0) {
     die("Sessão inválida.");
 }
 
 // 1. Validação do filtro (whitelist)
 $filtroPermitidos = ['todos', 'membros', 'visitantes'];
-$filtro = strtolower(trim($_GET['filtro'] ?? 'todos'));
+$filtro = strtolower(trim((string)($_GET['filtro'] ?? 'todos')));
 if (!in_array($filtro, $filtroPermitidos, true)) {
     $filtro = 'todos';
 }
@@ -30,7 +30,7 @@ $sufixoArquivo = match ($filtro) {
 
 // 2. Busca dados da sessão
 $stmtSessao = $pdo_read->prepare("
-    SELECT *, data_sessao AS data_ref
+    SELECT *
     FROM chancelaria_sessoes
     WHERE id = ?
     LIMIT 1
@@ -43,46 +43,73 @@ if (!$sessao) {
 }
 
 $tenant_id = (int)$sessao['tenant_id'];
+$participantes = [];
 
-// 3. Busca presenças filtradas
-$whereFiltro = "";
-if ($filtro === 'membros') {
-    $whereFiltro = " AND p.membro_id IS NOT NULL ";
-} elseif ($filtro === 'visitantes') {
-    $whereFiltro = " AND p.membro_id IS NULL ";
+// 3. Busca membros em chancelaria_presencas (quando filtro é 'todos' ou 'membros')
+if ($filtro === 'todos' || $filtro === 'membros') {
+    $sqlMembros = "
+        SELECT
+            p.id AS ordem_id,
+            'Membro do Quadro' AS categoria_tipo,
+            m.nome,
+            m.cim,
+            'Quadro da Loja' AS origem_label,
+            COALESCE(p.codigo_assinatura, '-') AS codigo_assinatura,
+            COALESCE(p.assinado_em_utc, COALESCE(p.created_at, '-')) AS assinado_em_utc,
+            COALESCE(p.ip_origem, '-') AS ip_origem,
+            COALESCE(p.hash_assinatura, '-') AS hash_assinatura
+        FROM chancelaria_presencas p
+        INNER JOIN chancelaria_membros m
+            ON m.id = p.membro_id
+           AND m.tenant_id = p.tenant_id
+        WHERE p.sessao_id = ?
+          AND p.tenant_id = ?
+          AND p.status_presenca = 'P'
+          AND (p.justificativa IS NULL OR TRIM(p.justificativa) = '')
+          AND NOT EXISTS (
+              SELECT 1
+              FROM chancelaria_presencas pj
+              WHERE pj.tenant_id = p.tenant_id
+                AND pj.sessao_id = p.sessao_id
+                AND pj.membro_id = p.membro_id
+                AND pj.status_presenca IN ('J', 'Justificado')
+          )
+        ORDER BY p.id ASC
+    ";
+    $stmtM = $pdo_read->prepare($sqlMembros);
+    $stmtM->execute([$sessao_id, $tenant_id]);
+    foreach ($stmtM->fetchAll(PDO::FETCH_ASSOC) as $rowM) {
+        $participantes[] = $rowM;
+    }
 }
 
-$sqlPresencas = "
-    SELECT
-        p.id,
-        p.membro_id,
-        p.visitante_id,
-        p.snapshot_nome,
-        p.snapshot_cim,
-        p.status_presenca,
-        p.codigo_assinatura,
-        p.hash_assinatura,
-        p.assinado_em_utc,
-        p.ip_origem,
-        m.nome AS membro_nome,
-        m.cim AS membro_cim,
-        m.grau AS membro_grau,
-        v.nome AS vis_nome,
-        v.cim AS vis_cim,
-        v.loja_origem AS vis_loja,
-        v.oriente AS vis_oriente
-    FROM chancelaria_presencas p
-    LEFT JOIN chancelaria_membros m ON m.id = p.membro_id
-    LEFT JOIN chancelaria_visitantes v ON v.id = p.visitante_id
-    WHERE p.sessao_id = ? AND p.tenant_id = ?
-    {$whereFiltro}
-    ORDER BY p.id ASC
-";
-$stmtPres = $pdo_read->prepare($sqlPresencas);
-$stmtPres->execute([$sessao_id, $tenant_id]);
-$presencas = $stmtPres->fetchAll(PDO::FETCH_ASSOC);
+// 4. Busca visitantes em chancelaria_visitantes (quando filtro é 'todos' ou 'visitantes')
+if ($filtro === 'todos' || $filtro === 'visitantes') {
+    $sqlVisitantes = "
+        SELECT
+            v.id AS ordem_id,
+            'Visitante' AS categoria_tipo,
+            v.nome,
+            v.cim,
+            TRIM(BOTH ' - ' FROM CONCAT_WS(' - ', NULLIF(v.loja_origem, ''), NULLIF(v.oriente, ''))) AS origem_label,
+            COALESCE(v.codigo_assinatura, '-') AS codigo_assinatura,
+            COALESCE(v.assinado_em_utc, COALESCE(v.created_at, '-')) AS assinado_em_utc,
+            COALESCE(v.ip_origem, '-') AS ip_origem,
+            COALESCE(v.hash_assinatura, '-') AS hash_assinatura
+        FROM chancelaria_visitantes v
+        WHERE v.sessao_id = ?
+          AND v.tenant_id = ?
+        ORDER BY v.id ASC
+    ";
+    $stmtV = $pdo_read->prepare($sqlVisitantes);
+    $stmtV->execute([$sessao_id, $tenant_id]);
+    foreach ($stmtV->fetchAll(PDO::FETCH_ASSOC) as $rowV) {
+        $rowV['origem_label'] = $rowV['origem_label'] !== '' ? $rowV['origem_label'] : 'Visitante';
+        $participantes[] = $rowV;
+    }
+}
 
-// 4. Tenta carregar certificado digital A1 (.pfx) opcionalmente
+// 5. Tenta carregar certificado digital A1 (.pfx) opcionalmente
 $assinaturaPfxAplicada = false;
 $statusPfxTexto = "Sem certificado A1 (.pfx) configurado — Manifesto HMAC-SHA256 ativo";
 $certPem = '';
@@ -108,7 +135,7 @@ if ($pfxPath !== '' && is_readable($pfxPath)) {
     }
 }
 
-// 5. Instancia TCPDF
+// 6. Instancia TCPDF
 $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
 $pdf->SetCreator('Chancelaria - Gestão Integrada');
 $pdf->SetAuthor('Loja Maçônica / Chancelaria');
@@ -129,7 +156,7 @@ if ($assinaturaPfxAplicada) {
     $pdf->setSignature($certPem, $pkeyPem, '', $extraCertsPem, 2, $infoAssinatura);
 }
 
-$dataSessaoFmt = !empty($sessao['data_ref']) ? date('d/m/Y', strtotime($sessao['data_ref'])) : '-';
+$dataSessaoFmt = !empty($sessao['data_sessao']) ? date('d/m/Y', strtotime((string)$sessao['data_sessao'])) : '-';
 $horaSessaoFmt = !empty($sessao['hora_sessao']) ? substr((string)$sessao['hora_sessao'], 0, 5) : '-';
 
 $html = '
@@ -140,7 +167,7 @@ $html = '
 <p style="text-align:center; font-size:8.5pt; color:#444; margin-top:0;">
     <strong>Sessão:</strong> ' . htmlspecialchars((string)($sessao['titulo'] ?? '')) . ' &nbsp;|&nbsp;
     <strong>Data:</strong> ' . htmlspecialchars($dataSessaoFmt) . ' às ' . htmlspecialchars($horaSessaoFmt) . ' &nbsp;|&nbsp;
-    <strong>Registros:</strong> ' . count($presencas) . '<br>
+    <strong>Registros:</strong> ' . count($participantes) . '<br>
     <strong>Status Criptográfico:</strong> ' . htmlspecialchars($statusPfxTexto) . '
 </p>
 <hr>
@@ -149,37 +176,28 @@ $html = '
     <thead>
         <tr style="background-color:#1d2132; color:#ffffff; font-weight:bold;">
             <th style="width:6%;">#</th>
-            <th style="width:32%;">Nome</th>
+            <th style="width:30%;">Nome</th>
             <th style="width:12%;">CIM</th>
-            <th style="width:16%;">Tipo / Origem</th>
-            <th style="width:34%;">Código da Assinatura</th>
+            <th style="width:20%;">Origem / Tipo</th>
+            <th style="width:32%;">Código da Assinatura</th>
         </tr>
     </thead>
     <tbody>';
 
 $idx = 1;
-foreach ($presencas as $row) {
-    $isObreiro = !empty($row['membro_id']);
-    $nome = $isObreiro
-        ? ($row['membro_nome'] ?? '')
-        : (!empty($row['snapshot_nome']) ? $row['snapshot_nome'] : ($row['vis_nome'] ?? ''));
-
-    $cim = $isObreiro
-        ? ($row['membro_cim'] ?? '')
-        : (!empty($row['snapshot_cim']) ? $row['snapshot_cim'] : ($row['vis_cim'] ?? ''));
-
-    $origem = $isObreiro
-        ? 'Quadro da Loja'
-        : trim(($row['vis_loja'] ?? '') . ' - ' . ($row['vis_oriente'] ?? ''), ' -');
-
+foreach ($participantes as $row) {
     $html .= '
         <tr>
             <td>' . $idx++ . '</td>
-            <td>' . htmlspecialchars((string)$nome) . '</td>
-            <td>' . htmlspecialchars((string)$cim) . '</td>
-            <td>' . htmlspecialchars((string)$origem) . '</td>
+            <td>' . htmlspecialchars((string)$row['nome']) . '</td>
+            <td>' . htmlspecialchars((string)$row['cim']) . '</td>
+            <td>' . htmlspecialchars((string)$row['origem_label']) . '</td>
             <td style="font-family:courier; font-size:7pt;">' . htmlspecialchars((string)$row['codigo_assinatura']) . '</td>
         </tr>';
+}
+
+if (empty($participantes)) {
+    $html .= '<tr><td colspan="5" style="text-align:center; color:#666;">Nenhum registro encontrado para este filtro.</td></tr>';
 }
 
 $html .= '
@@ -198,7 +216,7 @@ $html .= '
     </thead>
     <tbody>';
 
-foreach ($presencas as $row) {
+foreach ($participantes as $row) {
     $html .= '
         <tr>
             <td style="font-family:courier;">' . htmlspecialchars((string)$row['codigo_assinatura']) . '</td>
@@ -208,16 +226,26 @@ foreach ($presencas as $row) {
         </tr>';
 }
 
+if (empty($participantes)) {
+    $html .= '<tr><td colspan="4" style="text-align:center; color:#666;">Sem registros para exibir no manifesto.</td></tr>';
+}
+
 $html .= '
     </tbody>
 </table>';
 
 $pdf->writeHTML($html, true, false, true, false, '');
 
-// QR Code apontando para o validador público
+// 7. QR Code apontando para o validador público
 $urlValidacaoBase = 'https://seu-dominio.com.br/chancelaria/validar_assinatura.php'; // Ajuste sua URL
-$primeiroCodigo = $presencas[0]['codigo_assinatura'] ?? '';
-$qrUrl = $urlValidacaoBase . ($primeiroCodigo ? '?codigo=' . urlencode($primeiroCodigo) : '');
+$primeiroCodigo = '';
+foreach ($participantes as $pItem) {
+    if (!empty($pItem['codigo_assinatura']) && $pItem['codigo_assinatura'] !== '-') {
+        $primeiroCodigo = (string)$pItem['codigo_assinatura'];
+        break;
+    }
+}
+$qrUrl = $urlValidacaoBase . ($primeiroCodigo !== '' ? '?codigo=' . urlencode($primeiroCodigo) : '');
 
 $styleQr = [
     'border'        => 1,
@@ -248,7 +276,7 @@ if ($assinaturaPfxAplicada) {
     $pdf->setSignatureAppearance(12, $yAtual + 32, 80, 18);
 }
 
-// 6. Salva arquivo temporário, calcula SHA-256 final e trava a sessão no banco
+// 8. Salva arquivo temporário, calcula SHA-256 final e grava na sessão
 $nomeArquivo = 'lista_presenca_sessao_' . $sessao_id . '_' . $sufixoArquivo . '.pdf';
 $caminhoArquivo = sys_get_temp_dir() . '/' . $nomeArquivo;
 
