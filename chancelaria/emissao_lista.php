@@ -29,7 +29,7 @@ $stmtCount = $pdo_read->prepare("
     SELECT
         COUNT(*) AS total,
         SUM(CASE WHEN p.membro_id IS NOT NULL THEN 1 ELSE 0 END) AS total_membros,
-        (SELECT count(1) FROM chancelaria_visitante v WHERE v.sessao_id = p.sessao_id) AS total_visitantes
+        (SELECT count(1) FROM chancelaria_visitantes v WHERE v.sessao_id = p.sessao_id) AS total_visitantes
     FROM chancelaria_presencas p
     WHERE p.sessao_id = ?
 ");
