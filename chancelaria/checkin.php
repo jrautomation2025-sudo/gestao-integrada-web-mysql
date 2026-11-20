@@ -225,79 +225,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !isset($_POST['acao_ajax'])) {
                     $sucesso_registro = true;
                 }
             } elseif ($tipo === 'visitante') {
-                $nome = trim($_POST['nome'] ?? '');
-                $cim_visitante = trim($_POST['cim_visitante'] ?? '');
-                $loja_origem = trim($_POST['loja_origem'] ?? '');
-                $oriente = trim($_POST['oriente'] ?? '');
-                $potencia = trim($_POST['potencia'] ?? '');
-                $cargo = trim($_POST['cargo'] ?? '');
-                $telefone = trim($_POST['telefone'] ?? '');
-                $email = trim($_POST['email'] ?? '');
+                    $nome = trim($_POST['nome'] ?? '');
+                    $cim_visitante = trim($_POST['cim_visitante'] ?? '');
+                    $loja_origem = trim($_POST['loja_origem'] ?? '');
+                    $oriente = trim($_POST['oriente'] ?? '');
+                    $potencia = trim($_POST['potencia'] ?? '');
+                    $cargo = trim($_POST['cargo'] ?? '');
+                    $telefone = trim($_POST['telefone'] ?? '');
+                    $email = trim($_POST['email'] ?? '');
 
-                if ($nome === '' || $cim_visitante === '' || $loja_origem === '') {
-                    throw new RuntimeException("Preencha os campos obrigatórios do visitante.");
-                }
+           if ($nome === '' || $cim_visitante === '' || $loja_origem === '') {
+                   throw new RuntimeException("Preencha os campos obrigatórios do visitante.");
+           }
+
+                   $evidencia = gerarEvidenciaAssinatura([
+                        'tipo_presenca' => 'visitante',
+                        'tenant_id'     => $tenant_id,
+                        'sessao_id'     => $sessao_id,
+                        'cim_visitante' => $cim_visitante,
+                        'nome'          => $nome,
+                        'ip_origem'     => $ipCliente,
+                        'user_agent'    => $userAgent
+                  ]);
 
                 $stmtCad = $pdo_write->prepare("
-                    INSERT INTO chancelaria_visitantes (
-                        tenant_id, sessao_id, nome, cim, grau, loja_origem,
-                        oriente, potencia, telefone, email, ip_origem, user_agent, created_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-                ");
-                $stmtCad->execute([
-                    $tenant_id,
-                    $sessao_id,
-                    $nome,
-                    $cim_visitante,
-                    $cargo,
-                    $loja_origem,
-                    $oriente,
-                    $potencia,
-                    $telefone ?: null,
-                    $email ?: null,
-                    $ipCliente,
-                    $userAgent
-                ]);
-                $visitanteId = (int)$pdo_write->lastInsertId();
+                     INSERT INTO chancelaria_visitantes (
+                     tenant_id, sessao_id, nome, cim, grau, loja_origem,
+                     oriente, potencia, telefone, email,
+                     codigo_assinatura, hash_assinatura, assinado_em_utc,
+                     ip_origem, user_agent, created_at
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+               ");
+               $stmtCad->execute([
+                         $tenant_id,
+                         $sessao_id,
+                         $nome,
+                         $cim_visitante,
+                         $cargo,
+                         $loja_origem,
+                         $oriente,
+                         $potencia,
+                         $telefone ?: null,
+                         $email ?: null,
+                         $evidencia['codigo_assinatura'],
+                         $evidencia['hash_assinatura'],
+                         $evidencia['assinado_em_utc'],
+                         $ipCliente,
+                         $userAgent
+               ]);
 
-                $evidencia = gerarEvidenciaAssinatura([
-                    'tipo_presenca' => 'visitante',
-                    'tenant_id'     => $tenant_id,
-                    'sessao_id'     => $sessao_id,
-                    'visitante_id'  => $visitanteId,
-                    'cim_visitante' => $cim_visitante,
-                    'nome'          => $nome,
-                    'status'        => $presenca,
-                    'ip_origem'     => $ipCliente,
-                    'user_agent'    => $userAgent
-                ]);
-
-                $stmtInsPres = $pdo_write->prepare("
-                    INSERT INTO chancelaria_presencas (
-                        tenant_id, sessao_id, membro_id, visitante_id,
-                        snapshot_nome, snapshot_cim, status_presenca,
-                        codigo_assinatura, hash_assinatura, assinado_em_utc,
-                        ip_origem, user_agent, termo_aceite, nivel_assinatura
-                    ) VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 'AVANCADA')
-                ");
-                $stmtInsPres->execute([
-                    $tenant_id,
-                    $sessao_id,
-                    $visitanteId,
-                    $nome,
-                    $cim_visitante,
-                    $presenca,
-                    $evidencia['codigo_assinatura'],
-                    $evidencia['hash_assinatura'],
-                    $evidencia['assinado_em_utc'],
-                    $ipCliente,
-                    $userAgent
-                ]);
-
-                $pdo_write->commit();
-                $comprovante_assinatura = $evidencia;
-                $msg = "Visitante cadastrado e presença assinada eletronicamente com sucesso!";
-                $sucesso_registro = true;
+               $pdo_write->commit();
+               $comprovante_assinatura = $evidencia;
+               $msg = "Visitante cadastrado e presença registrada com sucesso!";
+               $sucesso_registro = true;
             } else {
                 throw new RuntimeException("Tipo de presença inválido.");
             }
