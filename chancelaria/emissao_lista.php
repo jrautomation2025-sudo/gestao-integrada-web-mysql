@@ -27,7 +27,6 @@ if (!$sessao) {
 
 $stmtCount = $pdo_read->prepare("
     SELECT
-        COUNT(*) AS total,
         SUM(CASE WHEN p.membro_id IS NOT NULL THEN 1 ELSE 0 END) AS total_membros,
         (SELECT count(1) FROM chancelaria_visitantes v WHERE v.sessao_id = p.sessao_id) AS total_visitantes
     FROM chancelaria_presencas p
@@ -106,7 +105,7 @@ $totais = $stmtCount->fetch(PDO::FETCH_ASSOC);
             <div class="col-4">
                 <div class="stat-box">
                     <div class="small text-secondary">Completa</div>
-                    <div class="fs-5 fw-bold text-success"><?= (int)($totais['total'] ?? 0) ?></div>
+                    <div class="fs-5 fw-bold text-success"><?= (int)($totais['total_membros'] + (int)($totais['total_visitantes'] ?? 0) ?></div>
                 </div>
             </div>
         </div>
