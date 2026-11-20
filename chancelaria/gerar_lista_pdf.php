@@ -2,7 +2,6 @@
 //ini_set('display_errors', 1);
 //error_reporting(E_ALL);
 require_once '../configuracoes/config.php';
-require_once '../configuracoes/vendor/tecnickcom/tcpdf/tcpdf.php'; // Ajuste o caminho do TCPDF se necessário
 
 $sessao_id = filter_input(INPUT_GET, 'sessao_id', FILTER_VALIDATE_INT) ?: 0;
 if ($sessao_id <= 0) {
@@ -22,10 +21,10 @@ $rotuloFiltro = match ($filtro) {
     default      => 'LISTA COMPLETA (MEMBROS E VISITANTES)'
 };
 
-$sufixoArquivo = match ($filtro) {
-    'membros'    => 'membros',
-    'visitantes' => 'visitantes',
-    default      => 'completa'
+$colunaHash = match ($filtro) {
+    'membros'    => 'hash_pdf_membros',
+    'visitantes' => 'hash_pdf_visitantes',
+    default      => 'hash_pdf_completa'
 };
 
 // 2. Busca dados da sessão
@@ -45,7 +44,7 @@ if (!$sessao) {
 $tenant_id = (int)$sessao['tenant_id'];
 $participantes = [];
 
-// 3. Busca membros em chancelaria_presencas (quando filtro é 'todos' ou 'membros')
+// 3. Busca membros em chancelaria_presencas
 if ($filtro === 'todos' || $filtro === 'membros') {
     $sqlMembros = "
         SELECT
@@ -83,7 +82,7 @@ if ($filtro === 'todos' || $filtro === 'membros') {
     }
 }
 
-// 4. Busca visitantes em chancelaria_visitantes (quando filtro é 'todos' ou 'visitantes')
+// 4. Busca visitantes em chancelaria_visitantes
 if ($filtro === 'todos' || $filtro === 'visitantes') {
     $sqlVisitantes = "
         SELECT
@@ -109,186 +108,19 @@ if ($filtro === 'todos' || $filtro === 'visitantes') {
     }
 }
 
-// 5. Tenta carregar certificado digital A1 (.pfx) opcionalmente
-$assinaturaPfxAplicada = false;
-$statusPfxTexto = "Sem certificado A1 (.pfx) configurado — Manifesto HMAC-SHA256 ativo";
-$certPem = '';
-$pkeyPem = '';
-$extraCertsPem = '';
+// 5. Calcula hash SHA-256 do manifesto/lista gerado
+$payloadManifesto = json_encode([
+    'sessao_id'     => $sessao_id,
+    'tenant_id'     => $tenant_id,
+    'filtro'        => $filtro,
+    'titulo'        => $sessao['titulo'] ?? '',
+    'data_sessao'   => $sessao['data_sessao'] ?? '',
+    'participantes' => $participantes
+], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
-$pfxPath = defined('ICP_CERT_PFX_PATH') ? (string)ICP_CERT_PFX_PATH : '';
-$pfxPass = defined('ICP_CERT_PFX_PASS') ? (string)ICP_CERT_PFX_PASS : '';
+$hashDocumento = hash('sha256', (string)$payloadManifesto);
 
-if ($pfxPath !== '' && is_readable($pfxPath)) {
-    $pfxConteudo = @file_get_contents($pfxPath);
-    $certs = [];
-    if ($pfxConteudo !== false && openssl_pkcs12_read($pfxConteudo, $certs, $pfxPass)) {
-        $certPem = $certs['cert'] ?? '';
-        $pkeyPem = $certs['pkey'] ?? '';
-        $extraCertsPem = !empty($certs['extracerts']) ? implode("\n", $certs['extracerts']) : '';
-        if ($certPem !== '' && $pkeyPem !== '') {
-            $assinaturaPfxAplicada = true;
-            $statusPfxTexto = "Assinado digitalmente com Certificado A1 (.pfx / ICP-Brasil)";
-        }
-    } else {
-        $statusPfxTexto = "Certificado A1 (.pfx) encontrado, mas não foi possível abrir (verifique senha)";
-    }
-}
-
-// 6. Instancia TCPDF
-$pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
-$pdf->SetCreator('Chancelaria - Gestão Integrada');
-$pdf->SetAuthor('Loja Maçônica / Chancelaria');
-$pdf->SetTitle('Lista de Presença (' . $rotuloFiltro . ') - ' . ($sessao['titulo'] ?? 'Sessão'));
-$pdf->setPrintHeader(false);
-$pdf->setPrintFooter(true);
-$pdf->SetMargins(12, 14, 12);
-$pdf->SetAutoPageBreak(true, 15);
-$pdf->AddPage();
-
-if ($assinaturaPfxAplicada) {
-    $infoAssinatura = [
-        'Name'        => 'Chancelaria / Presidência da Sessão',
-        'Location'    => 'Carpina, PE - Brasil',
-        'Reason'      => 'Lista de Presença (' . $rotuloFiltro . ') e Manifesto de Assinaturas',
-        'ContactInfo' => 'Chancelaria Oficial'
-    ];
-    $pdf->setSignature($certPem, $pkeyPem, '', $extraCertsPem, 2, $infoAssinatura);
-}
-
-$dataSessaoFmt = !empty($sessao['data_sessao']) ? date('d/m/Y', strtotime((string)$sessao['data_sessao'])) : '-';
-$horaSessaoFmt = !empty($sessao['hora_sessao']) ? substr((string)$sessao['hora_sessao'], 0, 5) : '-';
-
-$html = '
-<h2 style="text-align:center; color:#141724; margin-bottom:2px;">LISTA OFICIAL DE PRESENÇA</h2>
-<p style="text-align:center; font-size:9.5pt; font-weight:bold; color:#8a6400; margin:2px 0 6px 0;">
-    ESCOPO: ' . htmlspecialchars($rotuloFiltro) . '
-</p>
-<p style="text-align:center; font-size:8.5pt; color:#444; margin-top:0;">
-    <strong>Sessão:</strong> ' . htmlspecialchars((string)($sessao['titulo'] ?? '')) . ' &nbsp;|&nbsp;
-    <strong>Data:</strong> ' . htmlspecialchars($dataSessaoFmt) . ' às ' . htmlspecialchars($horaSessaoFmt) . ' &nbsp;|&nbsp;
-    <strong>Registros:</strong> ' . count($participantes) . '<br>
-    <strong>Status Criptográfico:</strong> ' . htmlspecialchars($statusPfxTexto) . '
-</p>
-<hr>
-<h4 style="color:#141724; margin-bottom:6px;">1. Relação de Presentes</h4>
-<table border="1" cellpadding="4" cellspacing="0" style="width:100%; font-size:8pt; border-collapse:collapse;">
-    <thead>
-        <tr style="background-color:#1d2132; color:#ffffff; font-weight:bold;">
-            <th style="width:6%;">#</th>
-            <th style="width:30%;">Nome</th>
-            <th style="width:12%;">CIM</th>
-            <th style="width:20%;">Origem / Tipo</th>
-            <th style="width:32%;">Código da Assinatura</th>
-        </tr>
-    </thead>
-    <tbody>';
-
-$idx = 1;
-foreach ($participantes as $row) {
-    $html .= '
-        <tr>
-            <td>' . $idx++ . '</td>
-            <td>' . htmlspecialchars((string)$row['nome']) . '</td>
-            <td>' . htmlspecialchars((string)$row['cim']) . '</td>
-            <td>' . htmlspecialchars((string)$row['origem_label']) . '</td>
-            <td style="font-family:courier; font-size:7pt;">' . htmlspecialchars((string)$row['codigo_assinatura']) . '</td>
-        </tr>';
-}
-
-if (empty($participantes)) {
-    $html .= '<tr><td colspan="5" style="text-align:center; color:#666;">Nenhum registro encontrado para este filtro.</td></tr>';
-}
-
-$html .= '
-    </tbody>
-</table>
-
-<h4 style="color:#141724; margin-top:14px; margin-bottom:6px;">2. Manifesto de Integridade (HMAC-SHA256 e Carimbo UTC)</h4>
-<table border="1" cellpadding="3" cellspacing="0" style="width:100%; font-size:6.8pt; border-collapse:collapse;">
-    <thead>
-        <tr style="background-color:#2d344d; color:#ffffff; font-weight:bold;">
-            <th style="width:24%;">Código Assinatura</th>
-            <th style="width:18%;">Data/Hora UTC</th>
-            <th style="width:14%;">IP Origem</th>
-            <th style="width:44%;">Hash HMAC-SHA256</th>
-        </tr>
-    </thead>
-    <tbody>';
-
-foreach ($participantes as $row) {
-    $html .= '
-        <tr>
-            <td style="font-family:courier;">' . htmlspecialchars((string)$row['codigo_assinatura']) . '</td>
-            <td style="font-family:courier;">' . htmlspecialchars((string)$row['assinado_em_utc']) . '</td>
-            <td style="font-family:courier;">' . htmlspecialchars((string)$row['ip_origem']) . '</td>
-            <td style="font-family:courier;">' . htmlspecialchars((string)$row['hash_assinatura']) . '</td>
-        </tr>';
-}
-
-if (empty($participantes)) {
-    $html .= '<tr><td colspan="4" style="text-align:center; color:#666;">Sem registros para exibir no manifesto.</td></tr>';
-}
-
-$html .= '
-    </tbody>
-</table>';
-
-$pdf->writeHTML($html, true, false, true, false, '');
-
-// 7. QR Code apontando para o validador público
-$urlValidacaoBase = 'https://seu-dominio.com.br/chancelaria/validar_assinatura.php'; // Ajuste sua URL
-$primeiroCodigo = '';
-foreach ($participantes as $pItem) {
-    if (!empty($pItem['codigo_assinatura']) && $pItem['codigo_assinatura'] !== '-') {
-        $primeiroCodigo = (string)$pItem['codigo_assinatura'];
-        break;
-    }
-}
-$qrUrl = $urlValidacaoBase . ($primeiroCodigo !== '' ? '?codigo=' . urlencode($primeiroCodigo) : '');
-
-$styleQr = [
-    'border'        => 1,
-    'vpadding'      => 'auto',
-    'hpadding'      => 'auto',
-    'fgcolor'       => [20, 23, 36],
-    'bgcolor'       => false,
-    'module_width'  => 2,
-    'module_height' => 2
-];
-
-$yAtual = $pdf->GetY() + 6;
-if ($yAtual > 245) {
-    $pdf->AddPage();
-    $yAtual = 20;
-}
-
-$notaRodape = $assinaturaPfxAplicada
-    ? "Documento assinado digitalmente com certificado ICP-Brasil (A1) — Escopo: " . $rotuloFiltro . ".\nConferência pública via QR Code ou em:\n" . $qrUrl
-    : "Documento com manifesto de integridade HMAC-SHA256 e registro de auditoria — Escopo: " . $rotuloFiltro . ".\nConferência pública via QR Code ou em:\n" . $qrUrl;
-
-$pdf->write2DBarcode($qrUrl, 'QRCODE,M', 12, $yAtual, 28, 28, $styleQr, 'N');
-$pdf->SetXY(44, $yAtual + 2);
-$pdf->SetFont('helvetica', '', 8);
-$pdf->MultiCell(154, 4, $notaRodape, 0, 'L');
-
-if ($assinaturaPfxAplicada) {
-    $pdf->setSignatureAppearance(12, $yAtual + 32, 80, 18);
-}
-
-// 8. Salva arquivo temporário, calcula SHA-256 final e grava na sessão
-$nomeArquivo = 'lista_presenca_sessao_' . $sessao_id . '_' . $sufixoArquivo . '.pdf';
-$caminhoArquivo = sys_get_temp_dir() . '/' . $nomeArquivo;
-
-$pdf->Output($caminhoArquivo, 'F');
-$hashPdfFinal = hash_file('sha256', $caminhoArquivo);
-
-$colunaHash = match ($filtro) {
-    'membros'    => 'hash_pdf_membros',
-    'visitantes' => 'hash_pdf_visitantes',
-    default      => 'hash_pdf_completa'
-};
-
+// Marca emissão e salva hash de conferência na sessão
 $stmtUpd = $pdo_write->prepare("
     UPDATE chancelaria_sessoes
     SET lista_emitida = 1,
@@ -296,11 +128,137 @@ $stmtUpd = $pdo_write->prepare("
         {$colunaHash} = ?
     WHERE id = ? AND tenant_id = ?
 ");
-$stmtUpd->execute([$hashPdfFinal, $sessao_id, $tenant_id]);
+$stmtUpd->execute([$hashDocumento, $sessao_id, $tenant_id]);
 
-header('Content-Type: application/pdf');
-header('Content-Disposition: inline; filename="' . $nomeArquivo . '"');
-header('X-Document-SHA256: ' . $hashPdfFinal);
-readfile($caminhoArquivo);
-@unlink($caminhoArquivo);
-exit;
+$dataSessaoFmt = !empty($sessao['data_sessao']) ? date('d/m/Y', strtotime((string)$sessao['data_sessao'])) : '-';
+$horaSessaoFmt = !empty($sessao['hora_sessao']) ? substr((string)$sessao['hora_sessao'], 0, 5) : '-';
+$primeiroCodigo = '';
+foreach ($participantes as $pItem) {
+    if (!empty($pItem['codigo_assinatura']) && $pItem['codigo_assinatura'] !== '-') {
+        $primeiroCodigo = (string)$pItem['codigo_assinatura'];
+        break;
+    }
+}
+?>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Presença - <?= htmlspecialchars((string)($sessao['titulo'] ?? 'Sessão')) ?></title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; color: #141724; background: #f8fafc; margin: 0; padding: 20px; }
+        .sheet { max-width: 900px; margin: 0 auto; background: #fff; padding: 28px; border: 1px solid #cbd5e1; border-radius: 8px; }
+        .toolbar { max-width: 900px; margin: 0 auto 14px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block; }
+        .btn-primary { background: #1d2132; color: #f5c041; }
+        .btn-secondary { background: #e2e8f0; color: #141724; }
+        h1 { font-size: 18px; text-align: center; margin: 0 0 4px; }
+        .sub { text-align: center; font-size: 12px; color: #475569; margin-bottom: 14px; }
+        .escopo { text-align: center; font-size: 12px; font-weight: bold; color: #8a6400; margin-bottom: 8px; }
+        h2 { font-size: 14px; margin: 18px 0 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; }
+        th { background: #1d2132; color: #fff; }
+        .mono { font-family: monospace; font-size: 10px; word-break: break-all; }
+        .footer-box { margin-top: 18px; padding-top: 12px; border-top: 1px solid #cbd5e1; display: flex; align-items: center; gap: 16px; }
+        @media print {
+            .toolbar { display: none !important; }
+            body { background: #fff; padding: 0; }
+            .sheet { border: none; padding: 0; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <a href="emissao_lista.php?sessao_id=<?= (int)$sessao_id ?>" class="btn btn-secondary">Voltar</a>
+    <button type="button" class="btn btn-primary" onclick="window.print()">Imprimir / Salvar como PDF</button>
+</div>
+
+<div class="sheet">
+    <h1>LISTA OFICIAL DE PRESENÇA E MANIFESTO</h1>
+    <div class="escopo">ESCOPO: <?= htmlspecialchars($rotuloFiltro) ?></div>
+    <div class="sub">
+        <strong>Sessão:</strong> <?= htmlspecialchars((string)($sessao['titulo'] ?? '')) ?> |
+        <strong>Data:</strong> <?= htmlspecialchars($dataSessaoFmt) ?> às <?= htmlspecialchars($horaSessaoFmt) ?> |
+        <strong>Registros:</strong> <?= count($participantes) ?>
+    </div>
+
+    <h2>1. Relação de Presentes</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:6%;">#</th>
+                <th style="width:30%;">Nome</th>
+                <th style="width:12%;">CIM</th>
+                <th style="width:20%;">Origem / Tipo</th>
+                <th style="width:32%;">Código da Assinatura</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($participantes)): ?>
+                <tr><td colspan="5" style="text-align:center;">Nenhum registro encontrado para este filtro.</td></tr>
+            <?php else: ?>
+                <?php foreach ($participantes as $i => $row): ?>
+                    <tr>
+                        <td><?= $i + 1 ?></td>
+                        <td><?= htmlspecialchars((string)$row['nome']) ?></td>
+                        <td><?= htmlspecialchars((string)$row['cim']) ?></td>
+                        <td><?= htmlspecialchars((string)$row['origem_label']) ?></td>
+                        <td class="mono"><?= htmlspecialchars((string)$row['codigo_assinatura']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
+
+    <h2>2. Manifesto de Integridade (HMAC-SHA256 e Carimbo UTC)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:24%;">Código Assinatura</th>
+                <th style="width:18%;">Data/Hora UTC</th>
+                <th style="width:14%;">IP Origem</th>
+                <th style="width:44%;">Hash HMAC-SHA256</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (empty($participantes)): ?>
+                <tr><td colspan="4" style="text-align:center;">Sem registros no manifesto.</td></tr>
+            <?php else: ?>
+                <?php foreach ($participantes as $row): ?>
+                    <tr>
+                        <td class="mono"><?= htmlspecialchars((string)$row['codigo_assinatura']) ?></td>
+                        <td class="mono"><?= htmlspecialchars((string)$row['assinado_em_utc']) ?></td>
+                        <td class="mono"><?= htmlspecialchars((string)$row['ip_origem']) ?></td>
+                        <td class="mono"><?= htmlspecialchars((string)$row['hash_assinatura']) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </tbody>
+    </table>
+
+    <div class="footer-box">
+        <div id="qrValidador"></div>
+        <div style="font-size:11px;">
+            <div><strong>Hash SHA-256 de Emissão:</strong> <span class="mono"><?= htmlspecialchars($hashDocumento) ?></span></div>
+            <div style="margin-top:4px;"><strong>Validação Pública:</strong> <span class="mono" id="urlValTexto"></span></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const baseValidador = window.location.origin + "/chancelaria/validar_assinatura.php";
+    const codigoRef = <?= json_encode($primeiroCodigo) ?>;
+    const urlFinal = codigoRef ? (baseValidador + "?codigo=" + encodeURIComponent(codigoRef)) : baseValidador;
+    document.getElementById("urlValTexto").innerText = urlFinal;
+    new QRCode(document.getElementById("qrValidador"), {
+        text: urlFinal,
+        width: 96,
+        height: 96
+    });
+</script>
+</body>
+</html>
