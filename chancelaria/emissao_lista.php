@@ -105,7 +105,7 @@ $totais = $stmtCount->fetch(PDO::FETCH_ASSOC);
             <div class="col-4">
                 <div class="stat-box">
                     <div class="small text-secondary">Completa</div>
-                    <div class="fs-5 fw-bold text-success"><?= (int)($totais['total_membros'] + (int)($totais['total_visitantes'] ?? 0) ?></div>
+                    <div class="fs-5 fw-bold text-success"><?= (int)($totais['total_membros'] ?? 0) + (int)($totais['total_visitantes'] ?? 0) ?></div>
                 </div>
             </div>
         </div>
